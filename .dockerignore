@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+!.env.example
+.m2
+logs
+**/node_modules
+frontend/dist
+backend/target
+*.bundle
