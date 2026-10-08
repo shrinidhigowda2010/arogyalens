@@ -1,0 +1,6 @@
+arogyalens:
+  demo:
+    enabled: true
+  ai:
+    enabled: false
+    api-key: ""

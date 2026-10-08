@@ -1,0 +1,27 @@
+# Dependencies & build
+node_modules/
+frontend/dist/
+frontend/node_modules/
+backend/target/
+.m2/
+
+# Env & secrets
+.env
+.env.local
+*.pem
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temp uploads (if any)
+tmp/
+temp/
+uploads/

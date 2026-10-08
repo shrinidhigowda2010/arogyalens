@@ -1,0 +1,53 @@
+server:
+  port: ${SERVER_PORT:8088}
+  tomcat:
+    max-swallow-size: 20MB
+
+spring:
+  application:
+    name: arogyalens
+  servlet:
+    multipart:
+      max-file-size: 15MB
+      max-request-size: 20MB
+  jackson:
+    default-property-inclusion: non_null
+
+arogyalens:
+  cors:
+    allowed-origins: "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
+  ai:
+    provider: gemini
+    api-key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-2.0-flash}
+    timeout-ms: ${AI_TIMEOUT_MS:20000}
+    enabled: ${AI_ENABLED:true}
+  files:
+    max-size-mb: 15
+    allowed-types: image/jpeg,image/png,image/webp,application/pdf
+  languages:
+    supported: en,hi,kn,ta,te,mr,bn
+    default-language: en
+  demo:
+    enabled: ${DEMO_ENABLED:false}
+  features:
+    voice: true
+    translation: true
+    sources: true
+  privacy:
+    redact-before-ai: true
+  session:
+    ttl-minutes: 60
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.arogyalens: INFO
+    root: WARN
+  pattern:
+    console: "%d{HH:mm:ss} %-5level [%logger{20}] %msg%n"

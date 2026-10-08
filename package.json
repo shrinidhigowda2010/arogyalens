@@ -1,0 +1,12 @@
+{
+  "name": "arogyalens",
+  "private": true,
+  "version": "1.0.0",
+  "description": "ArogyaLens — AI healthcare accessibility platform",
+  "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "cd backend && mvn -Dmaven.repo.local=../.m2 spring-boot:run",
+    "build:frontend": "npm --prefix frontend run build",
+    "test:backend": "cd backend && mvn -Dmaven.repo.local=../.m2 test"
+  }
+}

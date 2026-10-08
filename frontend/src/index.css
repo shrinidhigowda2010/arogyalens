@@ -1,0 +1,85 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand: #0f5c4c;
+  --color-brand-light: #157a66;
+  --color-brand-muted: #e8f2ef;
+  --color-surface: #f3f7f5;
+  --color-warn: #b45309;
+  --color-attention: #b91c1c;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Source Sans 3', system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-surface);
+  color: #1a2e28;
+  min-height: 100vh;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.atmosphere {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(15, 92, 76, 0.12), transparent),
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(15, 92, 76, 0.08), transparent),
+    radial-gradient(ellipse 50% 30% at 50% 100%, rgba(15, 92, 76, 0.06), transparent),
+    var(--color-surface);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.6s ease-out both;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 1.8s ease-in-out infinite;
+}
+
+[data-a11y='true'] {
+  font-size: 1.125rem;
+  line-height: 1.7;
+}
+
+[data-a11y='true'] button,
+[data-a11y='true'] .btn {
+  min-height: 3rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  font-size: 1.0625rem;
+}
+
+[data-a11y='true'] {
+  --tw-contrast: more;
+}
+
+[data-a11y='true'] .text-muted {
+  color: #0f2922;
+}
