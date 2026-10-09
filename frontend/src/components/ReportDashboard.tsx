@@ -25,7 +25,7 @@ export function ReportDashboard({ dashboard }: { dashboard: DashboardSummaryDto 
       <h2 id="dashboard-title" className="font-display text-2xl font-semibold text-brand">
         Report overview
       </h2>
-      <p className="text-muted mt-1 max-w-2xl text-sm text-brand/75">
+      <p className="text-muted mt-1 max-w-2xl text-sm text-brand/85">
         Counts reflect how results compare to the ranges printed on your document — not a diagnosis.
       </p>
       <div className="mt-5 grid gap-4 sm:grid-cols-3">
@@ -36,7 +36,7 @@ export function ReportDashboard({ dashboard }: { dashboard: DashboardSummaryDto 
           </div>
         ))}
       </div>
-      <p className="text-muted mt-3 text-xs text-brand/60">
+      <p className="text-muted mt-3 text-xs text-brand/85">
         {dashboard.total} parameters detected on this report.
       </p>
     </section>

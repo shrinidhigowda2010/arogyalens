@@ -7,7 +7,10 @@ export async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export async function shareText(title: string, text: string): Promise<'shared' | 'copied' | 'failed'> {
+export async function shareText(
+  title: string,
+  text: string,
+): Promise<'shared' | 'copied' | 'failed'> {
   if (navigator.share) {
     try {
       await navigator.share({ title, text })

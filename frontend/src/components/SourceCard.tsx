@@ -3,10 +3,12 @@ import type { TrustedSource } from '../types'
 export function SourceCard({ source }: { source: TrustedSource }) {
   return (
     <article className="rounded-xl border border-brand/10 bg-white p-4 transition hover:border-brand/25">
-      <p className="text-xs font-semibold uppercase tracking-wide text-brand/50">{source.category}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-brand/85">
+        {source.category}
+      </p>
       <h3 className="mt-1 font-display text-base font-semibold text-brand">{source.title}</h3>
-      <p className="text-muted mt-2 text-sm text-brand/75">{source.description}</p>
-      <p className="mt-2 text-xs font-medium text-brand/60">{source.name}</p>
+      <p className="text-muted mt-2 text-sm text-brand/85">{source.description}</p>
+      <p className="mt-2 text-xs font-medium text-brand/85">{source.name}</p>
       {source.url ? (
         <a
           href={source.url}

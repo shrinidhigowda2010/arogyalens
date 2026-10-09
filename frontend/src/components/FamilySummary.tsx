@@ -19,11 +19,14 @@ export function FamilySummary({ summary }: { summary: string }) {
   }
 
   return (
-    <section className="rounded-2xl border border-brand/10 bg-white p-6" aria-labelledby="family-summary">
+    <section
+      className="rounded-2xl border border-brand/10 bg-white p-6"
+      aria-labelledby="family-summary"
+    >
       <h2 id="family-summary" className="font-display text-xl font-semibold text-brand">
         Family summary
       </h2>
-      <p className="text-muted mt-1 text-sm text-brand/70">
+      <p className="text-muted mt-1 text-sm text-brand/85">
         A plain-language overview you can share with caregivers — not medical advice.
       </p>
       <pre className="mt-4 whitespace-pre-wrap font-sans text-sm leading-relaxed text-brand/90">
@@ -44,7 +47,7 @@ export function FamilySummary({ summary }: { summary: string }) {
         >
           Share
         </button>
-        {feedback ? <span className="self-center text-sm text-brand/70">{feedback}</span> : null}
+        {feedback ? <span className="self-center text-sm text-brand/85">{feedback}</span> : null}
       </div>
     </section>
   )

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { t } from '../lib/i18n'
-import { useApp } from '../context/AppContext'
+import { useApp } from '../hooks/useApp'
 
 const ACCEPT = '.jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf'
 const OK_EXT = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf'])
@@ -30,18 +30,19 @@ export function UploadZone({ onFileSelect, selectedFile, disabled }: UploadZoneP
   const inputRef = useRef<HTMLInputElement>(null)
   const { language } = useApp()
   const [dragOver, setDragOver] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!selectedFile || !selectedFile.type.startsWith('image/')) {
-      setPreviewUrl(null)
-      return
-    }
-    const url = URL.createObjectURL(selectedFile)
-    setPreviewUrl(url)
-    return () => URL.revokeObjectURL(url)
-  }, [selectedFile])
+  const inputId = useId()
+  const previewUrl = useMemo(
+    () => (selectedFile?.type.startsWith('image/') ? URL.createObjectURL(selectedFile) : null),
+    [selectedFile],
+  )
+  useEffect(
+    () => () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
+    },
+    [previewUrl],
+  )
 
   const pick = useCallback(
     (file: File | null) => {
@@ -64,6 +65,8 @@ export function UploadZone({ onFileSelect, selectedFile, disabled }: UploadZoneP
   )
 
   return (
+    // Drag-and-drop is a pointer enhancement; keyboard and screen-reader users use the file input/button.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       className={`rounded-2xl border-2 border-dashed px-6 py-10 text-center transition ${
         dragOver ? 'border-brand bg-brand-muted/50' : 'border-brand/25 bg-white/80'
@@ -80,10 +83,13 @@ export function UploadZone({ onFileSelect, selectedFile, disabled }: UploadZoneP
       }}
     >
       <input
+        id={inputId}
         ref={inputRef}
         type="file"
         accept={ACCEPT}
         className="sr-only"
+        tabIndex={-1}
+        aria-label={t(language, 'chooseFile')}
         disabled={disabled}
         onChange={(e) => {
           pick(e.target.files?.[0] ?? null)
@@ -92,12 +98,12 @@ export function UploadZone({ onFileSelect, selectedFile, disabled }: UploadZoneP
         }}
       />
       <p className="font-display text-lg font-semibold text-brand">{t(language, 'uploadTitle')}</p>
-      <p className="text-muted mt-2 text-sm text-brand/70">{t(language, 'uploadHint')}</p>
+      <p className="text-muted mt-2 text-sm text-brand/85">{t(language, 'uploadHint')}</p>
 
       {previewUrl ? (
         <img
           src={previewUrl}
-          alt="Selected document preview"
+          alt={`Preview of ${selectedFile?.name ?? 'the selected document'}`}
           className="mx-auto mt-4 max-h-48 rounded-xl border border-brand/10 object-contain"
         />
       ) : null}
@@ -118,7 +124,7 @@ export function UploadZone({ onFileSelect, selectedFile, disabled }: UploadZoneP
         type="button"
         disabled={disabled}
         onClick={() => inputRef.current?.click()}
-        className="btn mt-5 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-light focus:outline-none focus:ring-2 focus:ring-brand/40"
+        className="btn mt-5 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-light"
       >
         {t(language, 'chooseFile')}
       </button>

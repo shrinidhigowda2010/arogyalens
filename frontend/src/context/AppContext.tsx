@@ -1,29 +1,7 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { AnalysisResponse, AppLanguage, StoredSession } from '../types'
 import { STORAGE_KEYS } from '../lib/constants'
-
-interface AppContextValue {
-  language: AppLanguage
-  setLanguage: (lang: AppLanguage) => void
-  accessibilityMode: boolean
-  setAccessibilityMode: (on: boolean) => void
-  analysis: AnalysisResponse | null
-  setAnalysis: (data: AnalysisResponse | null) => void
-  recentSessions: StoredSession[]
-  addSession: (session: StoredSession) => void
-  simplifiedCopy: boolean
-  setSimplifiedCopy: (on: boolean) => void
-}
-
-const AppContext = createContext<AppContextValue | null>(null)
+import { AppContext } from './appContext'
 
 function loadLanguage(): AppLanguage {
   const raw = localStorage.getItem(STORAGE_KEYS.language)
@@ -47,6 +25,7 @@ function loadSessions(): StoredSession[] {
   }
 }
 
+/** Holds app-wide UI state (language, accessibility mode, current analysis) persisted to localStorage. */
 export function AppProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<AppLanguage>(loadLanguage)
   const [accessibilityMode, setAccessibilityModeState] = useState(loadA11y)
@@ -101,10 +80,4 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
-}
-
-export function useApp(): AppContextValue {
-  const ctx = useContext(AppContext)
-  if (!ctx) throw new Error('useApp must be used within AppProvider')
-  return ctx
 }

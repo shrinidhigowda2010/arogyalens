@@ -37,7 +37,7 @@ export function ProcessingProgress({ steps, activeIndex, complete }: ProcessingP
               >
                 {done ? '✓' : i + 1}
               </span>
-              <span className={done || current ? 'font-medium text-brand' : 'text-brand/50'}>
+              <span className={done || current ? 'font-medium text-brand' : 'text-brand/85'}>
                 {label}
               </span>
             </li>

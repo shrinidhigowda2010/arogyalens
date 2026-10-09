@@ -1,54 +1,62 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { SPEECH_LOCALES } from '../lib/constants'
+import { useEffect, useState } from 'react'
+import { fetchSpeech } from '../api/client'
+import { speak, stopSpeaking } from '../lib/speech'
 import type { AppLanguage } from '../types'
 
 interface AudioPlayerProps {
   text: string
   language: AppLanguage
   label?: string
+  stopLabel?: string
 }
 
-export function AudioPlayer({ text, language, label = 'Listen' }: AudioPlayerProps) {
+/**
+ * Reads text aloud in the given language with an on-device voice, falling back to
+ * Gemini text-to-speech from the backend when the device has no voice for that language.
+ */
+export function AudioPlayer({
+  text,
+  language,
+  label = 'Listen',
+  stopLabel = 'Stop',
+}: AudioPlayerProps) {
   const [speaking, setSpeaking] = useState(false)
-  const utterRef = useRef<SpeechSynthesisUtterance | null>(null)
+  const [failed, setFailed] = useState(false)
 
-  const stop = useCallback(() => {
-    window.speechSynthesis.cancel()
-    setSpeaking(false)
-  }, [])
+  useEffect(() => () => stopSpeaking(), [])
 
-  useEffect(() => () => stop(), [stop])
-
-  const speak = () => {
-    if (!('speechSynthesis' in window) || !text.trim()) return
-    stop()
-    const utter = new SpeechSynthesisUtterance(text)
-    utter.lang = SPEECH_LOCALES[language] ?? 'en-IN'
-    const voices = window.speechSynthesis.getVoices()
-    const match = voices.find((v) => v.lang.startsWith(language))
-    if (match) utter.voice = match
-    utter.onend = () => setSpeaking(false)
-    utter.onerror = () => setSpeaking(false)
-    utterRef.current = utter
-    window.speechSynthesis.speak(utter)
+  const toggle = async () => {
+    if (speaking) {
+      stopSpeaking()
+      setSpeaking(false)
+      return
+    }
+    setFailed(false)
     setSpeaking(true)
-  }
-
-  const supported = typeof window !== 'undefined' && 'speechSynthesis' in window
-
-  if (!supported) {
-    return (
-      <p className="text-muted text-xs text-brand/60">Listen is not supported in this browser.</p>
-    )
+    const mode = await speak(text, language, fetchSpeech, () => setSpeaking(false))
+    if (mode === 'unsupported') {
+      setSpeaking(false)
+      setFailed(true)
+    }
   }
 
   return (
-    <button
-      type="button"
-      onClick={speaking ? stop : speak}
-      className="inline-flex items-center gap-2 rounded-lg border border-brand/20 bg-white px-3 py-2 text-sm font-semibold text-brand transition hover:border-brand/40 focus:outline-none focus:ring-2 focus:ring-brand/30"
-    >
-      {speaking ? 'Stop' : label}
-    </button>
+    <span className="inline-flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => void toggle()}
+        disabled={!text.trim()}
+        aria-pressed={speaking}
+        className="inline-flex items-center gap-2 rounded-lg border border-brand/30 bg-white px-3 py-2 text-sm font-semibold text-brand transition hover:border-brand/60 disabled:opacity-50"
+      >
+        <span aria-hidden="true">{speaking ? '■' : '🔊'}</span>
+        {speaking ? stopLabel : label}
+      </button>
+      {failed ? (
+        <span role="status" className="text-xs text-brand/85">
+          Audio is not available right now.
+        </span>
+      ) : null}
+    </span>
   )
 }

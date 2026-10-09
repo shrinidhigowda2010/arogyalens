@@ -7,11 +7,9 @@ export function MedicineCard({ medicine }: { medicine: MedicineInfo }) {
       <div>
         <h2 id="medicine-title" className="font-display text-2xl font-semibold text-brand">
           {medicine.name}
-          {medicine.strength ? (
-            <span className="text-brand/70"> · {medicine.strength}</span>
-          ) : null}
+          {medicine.strength ? <span className="text-brand/85"> · {medicine.strength}</span> : null}
         </h2>
-        <p className="text-muted mt-1 text-sm text-brand/70">
+        <p className="text-muted mt-1 text-sm text-brand/85">
           {medicine.dosageForm}
           {medicine.manufacturer ? ` · ${medicine.manufacturer}` : ''}
         </p>
@@ -28,7 +26,9 @@ export function MedicineCard({ medicine }: { medicine: MedicineInfo }) {
 
       {medicine.commonSideEffects?.length ? (
         <div>
-          <h3 className="font-display text-lg font-semibold text-brand">Commonly reported effects</h3>
+          <h3 className="font-display text-lg font-semibold text-brand">
+            Commonly reported effects
+          </h3>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-brand/85">
             {medicine.commonSideEffects.map((s) => (
               <li key={s}>{s}</li>

@@ -1,9 +1,5 @@
 export type DocumentType =
-  | 'LAB_REPORT'
-  | 'MEDICINE'
-  | 'PRESCRIPTION'
-  | 'DISCHARGE_SUMMARY'
-  | 'UNKNOWN'
+  'LAB_REPORT' | 'MEDICINE' | 'PRESCRIPTION' | 'DISCHARGE_SUMMARY' | 'UNKNOWN'
 
 export type ParameterStatus =
   | 'WITHIN_RANGE'
@@ -134,6 +130,57 @@ export interface VoiceQueryResponse {
   groundedFacts: string[]
   safetyNotes: string[]
   fromDocument: boolean
+  sources?: TrustedSource[]
+  emergency?: boolean
+}
+
+export interface SpecialtySuggestion {
+  specialty: string
+  reason: string
+  urgent: boolean
+  source: 'rules' | 'ai' | 'default'
+}
+
+/** A real place from Google Places. Never fabricated by the app. */
+export interface DoctorPlace {
+  id: string | null
+  name: string
+  address: string | null
+  rating: number | null
+  ratingCount: number | null
+  phone: string | null
+  openNow: boolean | null
+  mapsUrl: string | null
+}
+
+export interface SearchLink {
+  label: string
+  url: string
+  description: string
+}
+
+export interface DoctorSearchResponse {
+  specialty: string
+  locationLabel: string
+  placesEnabled: boolean
+  places: DoctorPlace[]
+  links: SearchLink[]
+  notice?: string | null
+}
+
+export interface DoctorSearchRequest {
+  specialty: string
+  latitude?: number
+  longitude?: number
+  location?: string
+  language: AppLanguage
+}
+
+export interface HealthResponse {
+  status: string
+  aiConfigured?: boolean
+  mapsConfigured?: boolean
+  historyEnabled?: boolean
 }
 
 export interface TranslateResponse {

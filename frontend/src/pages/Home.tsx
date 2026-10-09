@@ -1,13 +1,22 @@
 import { Link } from 'react-router-dom'
-import { useApp } from '../context/AppContext'
+import { AskBar } from '../components/AskBar'
+import { useApp } from '../hooks/useApp'
 import { t } from '../lib/i18n'
 
-export function Home() {
+export default function Home() {
   const { recentSessions, language } = useApp()
 
   const actions = [
-    { to: '/analyze/report', title: t(language, 'scanMedical'), desc: t(language, 'scanMedicalDesc') },
-    { to: '/analyze/medicine', title: t(language, 'scanMedicine'), desc: t(language, 'scanMedicineDesc') },
+    {
+      to: '/analyze/report',
+      title: t(language, 'scanMedical'),
+      desc: t(language, 'scanMedicalDesc'),
+    },
+    {
+      to: '/analyze/medicine',
+      title: t(language, 'scanMedicine'),
+      desc: t(language, 'scanMedicineDesc'),
+    },
     { to: '/analyze/prescription', title: t(language, 'scanRx'), desc: t(language, 'scanRxDesc') },
     {
       to: '/analyze/discharge',
@@ -15,6 +24,7 @@ export function Home() {
       desc: t(language, 'scanDischargeDesc'),
     },
     { to: '/ask', title: t(language, 'ask'), desc: t(language, 'askDesc') },
+    { to: '/doctors', title: t(language, 'doctors'), desc: t(language, 'doctorsDesc') },
   ]
 
   return (
@@ -24,17 +34,20 @@ export function Home() {
           <p className="font-display text-5xl font-semibold tracking-tight text-brand sm:text-6xl lg:text-7xl">
             ArogyaLens
           </p>
-          <p className="mt-3 text-sm font-semibold uppercase tracking-widest text-brand/55">
+          <p className="mt-3 text-sm font-semibold uppercase tracking-widest text-brand/85">
             {t(language, 'positioning')}
           </p>
           <h1 className="font-display mt-5 text-2xl font-medium leading-snug text-brand/90 sm:text-3xl">
             {t(language, 'hero')}
           </h1>
-          <p className="mt-5 max-w-xl text-lg text-brand/80">{t(language, 'heroBody')}</p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <p className="mt-5 max-w-xl text-lg text-brand/85">{t(language, 'heroBody')}</p>
+          <div className="mt-8">
+            <AskBar />
+          </div>
+          <div className="mt-6 flex flex-wrap gap-3">
             <Link
               to="/analyze/report"
-              className="btn rounded-xl bg-brand px-6 py-3 text-base font-semibold text-white shadow-md transition hover:bg-brand-light focus:outline-none focus:ring-2 focus:ring-brand/40"
+              className="btn rounded-xl bg-brand px-6 py-3 text-base font-semibold text-white shadow-md transition hover:bg-brand-light "
             >
               {t(language, 'scanReport')}
             </Link>
@@ -51,7 +64,7 @@ export function Home() {
               <h2 className="font-display text-lg font-semibold text-brand group-hover:text-brand-light">
                 {a.title}
               </h2>
-              <p className="text-muted mt-2 text-sm text-brand/75">{a.desc}</p>
+              <p className="text-muted mt-2 text-sm text-brand/85">{a.desc}</p>
             </Link>
           ))}
         </div>
@@ -69,7 +82,7 @@ export function Home() {
                     className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 transition hover:bg-brand-muted/30"
                   >
                     <span className="font-medium text-brand">{s.documentLabel}</span>
-                    <span className="text-xs text-brand/50">
+                    <span className="text-xs text-brand/85">
                       {new Date(s.visitedAt).toLocaleString()}
                     </span>
                   </Link>
@@ -86,7 +99,7 @@ export function Home() {
           <p className="mt-4 font-display text-lg font-semibold text-brand">
             ArogyaLens — {t(language, 'tagline')}
           </p>
-          <p className="text-muted mt-2 text-sm text-brand/75">{t(language, 'footerMission')}</p>
+          <p className="text-muted mt-2 text-sm text-brand/85">{t(language, 'footerMission')}</p>
         </footer>
       </section>
     </div>

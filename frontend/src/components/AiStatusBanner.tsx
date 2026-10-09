@@ -21,9 +21,11 @@ export function AiStatusBanner() {
   if (aiConfigured !== false) return null
 
   return (
-    <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-950">
-      Image recognition needs a Gemini API key. Add <code className="font-mono">GEMINI_API_KEY</code> to
-      the project <code className="font-mono">.env</code> and restart the backend. Text PDFs still work.
+    <div
+      role="status"
+      className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-950"
+    >
+      AI image reading is not configured on this server. Text-based PDF reports still work.
     </div>
   )
 }

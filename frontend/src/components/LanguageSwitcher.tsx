@@ -7,20 +7,25 @@ interface LanguageSwitcherProps {
   label?: string
 }
 
-export function LanguageSwitcher({ value, onChange, label = 'Explanation language' }: LanguageSwitcherProps) {
+/** Row of toggle buttons for choosing the explanation language. */
+export function LanguageSwitcher({
+  value,
+  onChange,
+  label = 'Explanation language',
+}: LanguageSwitcherProps) {
   return (
-    <div role="tablist" aria-label={label} className="flex flex-wrap gap-2">
+    <div role="group" aria-label={label} className="flex flex-wrap gap-2">
       {LANGUAGES.map((l) => (
         <button
           key={l.code}
           type="button"
-          role="tab"
-          aria-selected={value === l.code}
+          lang={l.code}
+          aria-pressed={value === l.code}
           onClick={() => onChange(l.code)}
           className={`rounded-full px-3 py-1.5 text-xs font-semibold transition sm:text-sm ${
             value === l.code
               ? 'bg-brand text-white shadow-sm'
-              : 'bg-white text-brand/80 ring-1 ring-brand/15 hover:ring-brand/30'
+              : 'bg-white text-brand ring-1 ring-brand/25 hover:ring-brand/50'
           }`}
         >
           {l.native}

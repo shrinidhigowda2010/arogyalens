@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ReportDashboard } from '../components/ReportDashboard'
 import { MedicalFindingCard } from '../components/MedicalFindingCard'
@@ -8,21 +8,22 @@ import { SafetyBanner } from '../components/SafetyBanner'
 import { WhySeeingThis } from '../components/WhySeeingThis'
 import { FamilySummary } from '../components/FamilySummary'
 import { ChatPanel } from '../components/ChatPanel'
-import { VoiceAssistant } from '../components/VoiceAssistant'
+import { AskBar } from '../components/AskBar'
+import { DoctorFinder } from '../components/DoctorFinder'
 import { DocumentPreview } from '../components/DocumentPreview'
 import { MedicineCard } from '../components/MedicineCard'
 import { PrescriptionSchedule } from '../components/PrescriptionSchedule'
 import { DischargeSections } from '../components/DischargeSections'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { AudioPlayer } from '../components/AudioPlayer'
-import { useApp } from '../context/AppContext'
+import { useApp } from '../hooks/useApp'
 import { t } from '../lib/i18n'
-import type { AppLanguage } from '../types'
+import type { AnalysisResponse } from '../types'
 
-export function Results() {
+export default function Results() {
   const { analysis, language, setLanguage } = useApp()
   const navigate = useNavigate()
-  const [explainLang, setExplainLang] = useState<AppLanguage>(language)
+  const explainLang = language
 
   useEffect(() => {
     if (!analysis) {
@@ -30,13 +31,9 @@ export function Results() {
     }
   }, [analysis, navigate])
 
-  useEffect(() => {
-    setExplainLang(language)
-  }, [language])
-
   if (!analysis) {
     return (
-      <p className="p-8 text-center text-brand/70">
+      <p className="p-8 text-center text-brand/85">
         {t(language, 'noResults')}{' '}
         <Link to="/analyze/report" className="font-semibold underline">
           {t(language, 'uploadFirst')}
@@ -45,25 +42,24 @@ export function Results() {
     )
   }
 
-  const sampleTranslation =
-    analysis.translations?.[explainLang] ?? analysis.translations?.en ?? ''
+  const sampleTranslation = analysis.translations?.[explainLang] ?? analysis.translations?.en ?? ''
 
   return (
     <div className="min-h-screen bg-surface">
       <div className="mx-auto max-w-6xl space-y-10 px-4 py-8 sm:px-6">
         <header>
-          <Link to="/" className="text-sm font-semibold text-brand/70 hover:text-brand">
+          <Link to="/" className="text-sm font-semibold text-brand/85 hover:text-brand">
             ← {t(language, 'backHome')}
           </Link>
           <h1 className="font-display mt-3 text-3xl font-semibold text-brand">
             {analysis.documentLabel}
           </h1>
-          <p className="text-muted mt-1 text-sm text-brand/70">
+          <p className="text-muted mt-1 text-sm text-brand/85">
             Session {analysis.sessionId.slice(0, 8)}… · {analysis.pages}{' '}
             {analysis.pages === 1 ? 'page' : 'pages'}
             {analysis.aiUsed ? ' · AI-assisted' : ' · Local extraction'}
           </p>
-          <p className="mt-2 text-sm italic text-brand/60">{analysis.disclaimer}</p>
+          <p className="mt-2 text-sm italic text-brand/85">{analysis.disclaimer}</p>
         </header>
 
         <DocumentPreview note={analysis.originalPreviewNote} />
@@ -82,7 +78,9 @@ export function Results() {
                     key={p.name}
                     parameter={p}
                     explainLang={explainLang}
-                    defaultOpen={p.name.toLowerCase().includes('hba1c') || analysis.parameters.length <= 3}
+                    defaultOpen={
+                      p.name.toLowerCase().includes('hba1c') || analysis.parameters.length <= 3
+                    }
                   />
                 ))}
               </div>
@@ -107,13 +105,7 @@ export function Results() {
             {t(language, 'multilingual')}
           </h2>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <LanguageSwitcher
-              value={explainLang}
-              onChange={(lang) => {
-                setExplainLang(lang)
-                setLanguage(lang)
-              }}
-            />
+            <LanguageSwitcher value={explainLang} onChange={setLanguage} />
             <AudioPlayer
               text={sampleTranslation || analysis.parameters?.[0]?.explanation || ''}
               language={explainLang}
@@ -122,7 +114,7 @@ export function Results() {
           {sampleTranslation ? (
             <p className="mt-4 text-sm leading-relaxed text-brand/85">{sampleTranslation}</p>
           ) : (
-            <p className="mt-4 text-sm text-brand/70">
+            <p className="mt-4 text-sm text-brand/85">
               Open a finding below and switch language to hear a localized explanation.
             </p>
           )}
@@ -130,7 +122,9 @@ export function Results() {
 
         {analysis.sources?.length ? (
           <section>
-            <h2 className="font-display text-xl font-semibold text-brand">{t(language, 'sources')}</h2>
+            <h2 className="font-display text-xl font-semibold text-brand">
+              {t(language, 'sources')}
+            </h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {analysis.sources.map((s) => (
                 <SourceCard key={s.id} source={s} />
@@ -144,10 +138,22 @@ export function Results() {
         <FamilySummary summary={analysis.familySummary} />
 
         <div className="grid gap-6 lg:grid-cols-2">
+          <AskBar sessionId={analysis.sessionId} title={t(language, 'ask')} />
           <ChatPanel sessionId={analysis.sessionId} />
-          <VoiceAssistant sessionId={analysis.sessionId} />
         </div>
+
+        <DoctorFinder initialConcern={concernFromAnalysis(analysis)} />
       </div>
     </div>
   )
+}
+
+/** Builds a doctor-finder concern from results that are outside range (names only, no values). */
+function concernFromAnalysis(analysis: AnalysisResponse): string {
+  if (analysis.documentType === 'MEDICINE') return analysis.medicine?.name ?? ''
+  const flagged = (analysis.parameters ?? [])
+    .filter((p) => p.status !== 'WITHIN_RANGE')
+    .slice(0, 3)
+    .map((p) => p.name)
+  return flagged.join(', ')
 }

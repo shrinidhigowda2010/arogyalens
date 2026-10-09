@@ -1,28 +1,36 @@
+import { useId } from 'react'
+import { useApp } from '../hooks/useApp'
 import { LANGUAGES } from '../lib/constants'
-import { useApp } from '../context/AppContext'
 import type { AppLanguage } from '../types'
 
-export function LanguageSelector({ compact }: { compact?: boolean }) {
+interface LanguageSelectorProps {
+  /** Visible label; hidden visually (but kept for screen readers) when `compact`. */
+  label?: string
+  compact?: boolean
+}
+
+/** Picker for the app-wide language, which also drives speech and AI answer language. */
+export function LanguageSelector({ label = 'Language', compact }: LanguageSelectorProps) {
   const { language, setLanguage } = useApp()
+  const id = useId()
 
   return (
-    <label className={`flex items-center gap-2 ${compact ? 'text-sm' : ''}`}>
-      <span className="sr-only">Choose language</span>
-      {!compact && (
-        <span className="text-muted hidden text-sm font-medium text-brand/80 sm:inline">Language</span>
-      )}
+    <div className={`flex items-center gap-2 ${compact ? 'text-sm' : ''}`}>
+      <label htmlFor={id} className={compact ? 'sr-only' : 'text-sm font-medium text-brand/85'}>
+        {label}
+      </label>
       <select
+        id={id}
         value={language}
         onChange={(e) => setLanguage(e.target.value as AppLanguage)}
-        className="btn rounded-lg border border-brand/20 bg-white px-3 py-2 text-sm font-medium text-brand shadow-sm transition hover:border-brand/40 focus:outline-none focus:ring-2 focus:ring-brand/30"
-        aria-label="Language"
+        className="btn rounded-lg border border-brand/30 bg-white px-3 py-2 text-sm font-medium text-brand shadow-sm transition hover:border-brand/50"
       >
         {LANGUAGES.map((l) => (
-          <option key={l.code} value={l.code}>
-            {l.native}
+          <option key={l.code} value={l.code} lang={l.code}>
+            {l.native} ({l.label})
           </option>
         ))}
       </select>
-    </label>
+    </div>
   )
 }

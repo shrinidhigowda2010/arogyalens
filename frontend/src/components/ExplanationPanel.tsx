@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { translateText } from '../api/client'
-import { useApp } from '../context/AppContext'
+import { useApp } from '../hooks/useApp'
 import type { AppLanguage, MedicalParameter } from '../types'
 import { t } from '../lib/i18n'
 import { AudioPlayer } from './AudioPlayer'
@@ -11,14 +11,14 @@ interface ExplanationPanelProps {
   explainLang: AppLanguage
 }
 
-export function ExplanationPanel({ parameter, explainLang: initialLang }: ExplanationPanelProps) {
+/** Plain-language explanation of one parameter, translated on demand and readable aloud. */
+export function ExplanationPanel({ parameter, explainLang }: ExplanationPanelProps) {
   const { simplifiedCopy, setSimplifiedCopy, language, setLanguage, analysis } = useApp()
-  const [explainLang, setExplainLang] = useState<AppLanguage>(initialLang || language)
-  const [translated, setTranslated] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [fetched, setFetched] = useState<{ key: string; text: string | null } | null>(null)
 
   const baseText = simplifiedCopy ? parameter.simpleExplanation : parameter.explanation
   const cachedTranslations = analysis?.translations
+  const requestKey = `${explainLang}|${baseText}`
 
   const localTranslation = useMemo(() => {
     if (explainLang === 'en') return null
@@ -30,38 +30,25 @@ export function ExplanationPanel({ parameter, explainLang: initialLang }: Explan
   }, [cachedTranslations, explainLang, parameter.name])
 
   useEffect(() => {
-    setExplainLang(initialLang || language)
-  }, [initialLang, language])
-
-  useEffect(() => {
-    if (explainLang === 'en') {
-      setTranslated(null)
-      return
-    }
-    if (localTranslation) {
-      setTranslated(localTranslation)
-      setLoading(false)
-      return
-    }
+    if (explainLang === 'en' || localTranslation) return
     let cancelled = false
-    setLoading(true)
     translateText(baseText, explainLang, parameter.name)
       .then((res) => {
-        if (!cancelled) setTranslated(res.translated)
+        if (!cancelled) setFetched({ key: requestKey, text: res.translated })
       })
       .catch(() => {
-        if (!cancelled) setTranslated(null)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setFetched({ key: requestKey, text: null })
       })
     return () => {
       cancelled = true
     }
-  }, [baseText, explainLang, parameter.name, localTranslation])
+  }, [baseText, explainLang, parameter.name, localTranslation, requestKey])
 
+  const remote = fetched?.key === requestKey ? fetched.text : undefined
+  const loading = explainLang !== 'en' && !localTranslation && remote === undefined
+  const translated = explainLang === 'en' ? null : (localTranslation ?? remote ?? null)
   const displayText =
-    explainLang === 'en' ? baseText : translated ?? (loading ? 'Translating…' : baseText)
+    explainLang === 'en' ? baseText : (translated ?? (loading ? 'Translating…' : baseText))
 
   const sections = [
     {
@@ -99,22 +86,21 @@ export function ExplanationPanel({ parameter, explainLang: initialLang }: Explan
         <AudioPlayer text={displayText} language={explainLang} label={t(language, 'listening')} />
       </div>
 
-      <LanguageSwitcher
-        value={explainLang}
-        onChange={(lang) => {
-          setExplainLang(lang)
-          setLanguage(lang)
-        }}
-      />
+      <LanguageSwitcher value={explainLang} onChange={setLanguage} />
 
-      <div className="rounded-xl bg-brand-muted/40 p-4 text-sm leading-relaxed text-brand/90">
+      <div
+        lang={explainLang}
+        aria-live="polite"
+        aria-busy={loading}
+        className="rounded-xl bg-brand-muted/40 p-4 text-sm leading-relaxed text-brand"
+      >
         {displayText}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         {sections.map((s) => (
           <div key={s.title} className="rounded-xl border border-brand/10 bg-surface/80 p-4">
-            <h4 className="text-xs font-bold uppercase tracking-wide text-brand/60">{s.title}</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wide text-brand/85">{s.title}</h4>
             <p className="mt-2 text-sm text-brand/85">{s.body}</p>
           </div>
         ))}

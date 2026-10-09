@@ -24,7 +24,7 @@ export function PrivacyShield({ shield }: { shield: PrivacyShieldDto | null }) {
           <h2 id="privacy-shield-title" className="font-display text-xl font-semibold text-brand">
             Privacy shield
           </h2>
-          <p className="text-muted mt-2 text-sm leading-relaxed text-brand/80">
+          <p className="text-muted mt-2 text-sm leading-relaxed text-brand/85">
             {shield?.message ??
               'ArogyaLens detects and masks common personal identifiers before processing.'}
           </p>
@@ -36,12 +36,12 @@ export function PrivacyShield({ shield }: { shield: PrivacyShieldDto | null }) {
                   className="rounded-lg bg-brand-muted/60 px-3 py-2 text-sm text-brand/90"
                 >
                   <span className="font-semibold">{f.type}:</span>{' '}
-                  <span className="font-mono text-brand/70">{f.maskedValue}</span>
+                  <span className="font-mono text-brand/85">{f.maskedValue}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-muted mt-3 text-sm italic text-brand/60">
+            <p className="text-muted mt-3 text-sm italic text-brand/85">
               Scanning for names, IDs, and contact details…
             </p>
           )}

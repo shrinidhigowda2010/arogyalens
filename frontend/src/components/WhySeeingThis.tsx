@@ -4,13 +4,15 @@ export function WhySeeingThis() {
       <h2 className="font-display text-lg font-semibold text-brand">Why am I seeing this?</h2>
       <dl className="mt-3 space-y-3">
         <div>
-          <dt className="text-xs font-bold uppercase tracking-wide text-brand">From your document</dt>
+          <dt className="text-xs font-bold uppercase tracking-wide text-brand">
+            From your document
+          </dt>
           <dd className="mt-1">
             Values, medicine names, and dates taken directly from your upload or demo sample.
           </dd>
         </div>
         <div>
-          <dt className="text-xs font-bold uppercase tracking-wide text-brand/70">
+          <dt className="text-xs font-bold uppercase tracking-wide text-brand/85">
             General health information
           </dt>
           <dd className="mt-1">
@@ -18,7 +20,7 @@ export function WhySeeingThis() {
           </dd>
         </div>
         <div>
-          <dt className="text-xs font-bold uppercase tracking-wide text-brand/70">
+          <dt className="text-xs font-bold uppercase tracking-wide text-brand/85">
             AI-generated explanation
           </dt>
           <dd className="mt-1">

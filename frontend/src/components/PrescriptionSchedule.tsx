@@ -18,7 +18,7 @@ function Slot({ active, label }: { active: boolean; label: string }) {
 export function PrescriptionSchedule({ items }: { items: PrescriptionItem[] }) {
   if (!items?.length) {
     return (
-      <p className="text-sm text-brand/70">No prescription items were detected on this scan.</p>
+      <p className="text-sm text-brand/85">No prescription items were detected on this scan.</p>
     )
   }
 
@@ -28,7 +28,7 @@ export function PrescriptionSchedule({ items }: { items: PrescriptionItem[] }) {
         <h2 id="rx-schedule" className="font-display text-2xl font-semibold text-brand">
           Prescription schedule
         </h2>
-        <p className="text-muted mt-1 text-sm text-brand/70">
+        <p className="text-muted mt-1 text-sm text-brand/85">
           Visual guide from your scan — confirm timing with your pharmacist or doctor.
         </p>
       </div>
@@ -44,7 +44,7 @@ export function PrescriptionSchedule({ items }: { items: PrescriptionItem[] }) {
                 {item.medicineName}
                 {item.strength ? ` · ${item.strength}` : ''}
               </h3>
-              <p className="text-muted mt-1 text-sm text-brand/75">
+              <p className="text-muted mt-1 text-sm text-brand/85">
                 {[item.frequency, item.timing, item.foodRelation].filter(Boolean).join(' · ')}
               </p>
             </div>
@@ -62,7 +62,7 @@ export function PrescriptionSchedule({ items }: { items: PrescriptionItem[] }) {
           </div>
 
           {item.note ? (
-            <p className="text-muted mt-3 text-sm italic text-brand/70">{item.note}</p>
+            <p className="text-muted mt-3 text-sm italic text-brand/85">{item.note}</p>
           ) : null}
         </article>
       ))}

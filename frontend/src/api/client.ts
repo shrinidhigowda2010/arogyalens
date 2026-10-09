@@ -1,143 +1,133 @@
+import { prepareUpload } from '../lib/image'
 import type {
   AnalysisResponse,
   AppLanguage,
   ChatResponse,
-  SafetyValidateResponse,
+  DoctorSearchRequest,
+  DoctorSearchResponse,
+  HealthResponse,
+  SpecialtySuggestion,
   TranslateResponse,
   VoiceQueryResponse,
 } from '../types'
 
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? ''
+const API_BASE = import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? ''
+
+/** Error raised for non-2xx API responses, carrying the backend's stable error code. */
+export class ApiError extends Error {
+  readonly code: string
+  readonly status: number
+
+  constructor(message: string, code: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.code = code
+    this.status = status
+  }
+}
+
+interface ErrorBody {
+  code?: string
+  message?: string
+  userMessage?: string
+}
+
+async function toApiError(res: Response): Promise<ApiError> {
+  let body: ErrorBody = {}
+  try {
+    body = (await res.json()) as ErrorBody
+  } catch {
+    /* non-JSON error body */
+  }
+  const message =
+    body.userMessage ??
+    (res.status === 429
+      ? 'Too many requests. Please wait a minute and try again.'
+      : `Request failed (${res.status}). Please try again.`)
+  return new ApiError(message, body.code ?? 'HTTP_' + res.status, res.status)
+}
 
 async function handleResponse<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    let detail = res.statusText
-    try {
-      const body = await res.json()
-      if (body?.userMessage) detail = body.userMessage
-      else if (body?.message) detail = body.message
-      else if (typeof body === 'string') detail = body
-    } catch {
-      /* ignore */
-    }
-    throw new Error(detail || `Request failed (${res.status})`)
-  }
-  return res.json() as Promise<T>
+  if (!res.ok) throw await toApiError(res)
+  return (await res.json()) as T
 }
 
 function url(path: string): string {
   return `${API_BASE}${path}`
 }
 
-async function analyze(
-  path: string,
-  file: File,
-  language: AppLanguage,
-): Promise<AnalysisResponse> {
+function postJson<T>(path: string, body: unknown): Promise<T> {
+  return fetch(url(path), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then((res) => handleResponse<T>(res))
+}
+
+async function analyze(path: string, file: File, language: AppLanguage): Promise<AnalysisResponse> {
+  const prepared = await prepareUpload(file)
   const form = new FormData()
-  form.append('file', file, file.name)
+  form.append('file', prepared, prepared.name)
   form.append('language', language)
-  form.append('demo', 'false')
   return handleResponse(await fetch(url(path), { method: 'POST', body: form }))
 }
 
-export async function checkHealth(): Promise<{ status: string; aiConfigured?: boolean }> {
+export async function checkHealth(): Promise<HealthResponse> {
   return handleResponse(await fetch(url('/api/health')))
 }
 
-export async function analyzeDocument(
-  file: File,
-  language: AppLanguage,
-): Promise<AnalysisResponse> {
-  return analyze('/api/documents/analyze', file, language)
-}
+export const analyzeDocument = (file: File, language: AppLanguage) =>
+  analyze('/api/documents/analyze', file, language)
+export const analyzeMedicine = (file: File, language: AppLanguage) =>
+  analyze('/api/medicines/analyze', file, language)
+export const analyzePrescription = (file: File, language: AppLanguage) =>
+  analyze('/api/prescriptions/analyze', file, language)
+export const analyzeDischarge = (file: File, language: AppLanguage) =>
+  analyze('/api/discharge/analyze', file, language)
 
-export async function analyzeMedicine(
-  file: File,
-  language: AppLanguage,
-): Promise<AnalysisResponse> {
-  return analyze('/api/medicines/analyze', file, language)
-}
-
-export async function analyzePrescription(
-  file: File,
-  language: AppLanguage,
-): Promise<AnalysisResponse> {
-  return analyze('/api/prescriptions/analyze', file, language)
-}
-
-export async function analyzeDischarge(
-  file: File,
-  language: AppLanguage,
-): Promise<AnalysisResponse> {
-  return analyze('/api/discharge/analyze', file, language)
-}
-
-export async function translateText(
+export function translateText(
   text: string,
   targetLanguage: AppLanguage,
   medicalTerm?: string,
 ): Promise<TranslateResponse> {
-  return handleResponse(
-    await fetch(url('/api/translate'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, targetLanguage, medicalTerm }),
-    }),
-  )
+  return postJson('/api/translate', { text, targetLanguage, medicalTerm })
 }
 
-export async function voiceQuery(
+/** Asks a health question; `sessionId` grounds the answer in a scanned document when given. */
+export function voiceQuery(
   query: string,
-  sessionId: string,
   language: AppLanguage,
+  sessionId?: string,
 ): Promise<VoiceQueryResponse> {
-  return handleResponse(
-    await fetch(url('/api/voice/query'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, sessionId, language }),
-    }),
-  )
+  return postJson('/api/voice/query', { query, sessionId, language })
 }
 
-export async function chatMessage(
-  sessionId: string,
+export function chatMessage(
   message: string,
   language: AppLanguage,
+  sessionId?: string,
 ): Promise<ChatResponse> {
-  return handleResponse(
-    await fetch(url('/api/chat'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, message, language }),
-    }),
-  )
+  return postJson('/api/chat', { sessionId, message, language })
 }
 
-export async function fetchDoctorQuestions(
-  sessionId: string,
+export function suggestSpecialty(
+  condition: string,
   language: AppLanguage,
-): Promise<Record<string, string[]>> {
-  return handleResponse(
-    await fetch(url('/api/doctor-questions'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, language }),
-    }),
-  )
+): Promise<SpecialtySuggestion> {
+  return postJson('/api/doctors/specialty', { condition, language })
 }
 
-export async function validateSafety(text: string): Promise<SafetyValidateResponse> {
-  return handleResponse(
-    await fetch(url('/api/safety/validate'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    }),
-  )
+export function searchDoctors(request: DoctorSearchRequest): Promise<DoctorSearchResponse> {
+  return postJson('/api/doctors/search', request)
 }
 
-export async function fetchSource(id: string): Promise<unknown> {
-  return handleResponse(await fetch(url(`/api/sources/${encodeURIComponent(id)}`)))
+/** Gemini text-to-speech fallback; returns WAV audio. */
+export async function fetchSpeech(text: string, language: AppLanguage): Promise<Blob> {
+  const res = await fetch(url('/api/voice/tts'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: text.slice(0, 800), language }),
+  })
+  if (!res.ok) throw await toApiError(res)
+  return res.blob()
 }

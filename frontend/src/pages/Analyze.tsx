@@ -10,15 +10,15 @@ import {
 import { PrivacyShield } from '../components/PrivacyShield'
 import { ProcessingProgress } from '../components/ProcessingProgress'
 import { UploadZone } from '../components/UploadZone'
-import { useApp } from '../context/AppContext'
+import { useApp } from '../hooks/useApp'
 import { t } from '../lib/i18n'
-import type { AnalyzeMode, AnalysisResponse } from '../types'
+import type { AnalyzeMode, AnalysisResponse, AppLanguage } from '../types'
 
 const MODE_META: Record<
   AnalyzeMode,
   {
     titleKey: 'scanMedical' | 'scanMedicine' | 'scanRx' | 'scanDischarge'
-    analyze: (file: File, language: import('../types').AppLanguage) => Promise<AnalysisResponse>
+    analyze: (file: File, language: AppLanguage) => Promise<AnalysisResponse>
   }
 > = {
   report: { titleKey: 'scanMedical', analyze: analyzeDocument },
@@ -32,7 +32,7 @@ const STEP_MS = 160
 const PRIVACY_MS = 300
 const NAV_MS = 200
 
-export function Analyze() {
+export default function Analyze() {
   const { mode: modeParam } = useParams<{ mode: string }>()
   const mode = (modeParam ?? 'report') as AnalyzeMode
   const meta = MODE_META[mode] ?? MODE_META.report
@@ -68,7 +68,7 @@ export function Analyze() {
       const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf'
       if (health && health.aiConfigured === false && !isPdf && mode !== 'report') {
         throw new Error(
-          'Image recognition needs GEMINI_API_KEY in the project .env file. Add your key and restart the backend.',
+          'Image recognition is not available on this server right now. Text-based PDF reports still work.',
         )
       }
 
@@ -94,9 +94,7 @@ export function Analyze() {
       window.clearInterval(tick)
       setPhase('upload')
       setError(
-        e instanceof Error
-          ? e.message
-          : 'We could not analyze this document. Check that the backend is running on port 8088.',
+        e instanceof Error ? e.message : 'We could not analyze this document. Please try again.',
       )
     } finally {
       setBusy(false)
@@ -105,13 +103,13 @@ export function Analyze() {
 
   return (
     <div className="atmosphere mx-auto max-w-2xl px-4 py-10 sm:px-6">
-      <Link to="/" className="text-sm font-semibold text-brand/70 hover:text-brand">
+      <Link to="/" className="text-sm font-semibold text-brand/85 hover:text-brand">
         ← {t(language, 'backHome')}
       </Link>
       <h1 className="font-display mt-4 text-3xl font-semibold text-brand">
         {t(language, meta.titleKey)}
       </h1>
-      <p className="text-muted mt-2 text-brand/75">{t(language, 'uploadHint')}</p>
+      <p className="text-muted mt-2 text-brand/85">{t(language, 'uploadHint')}</p>
 
       {phase === 'upload' ? (
         <>

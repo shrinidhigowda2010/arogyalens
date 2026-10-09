@@ -16,7 +16,7 @@ export function DischargeSections({ summary }: { summary: DischargeSummary }) {
       <h2 id="discharge-title" className="font-display text-2xl font-semibold text-brand">
         Discharge summary
       </h2>
-      <p className="text-muted text-sm text-brand/70">
+      <p className="text-muted text-sm text-brand/85">
         Section-by-section view of your discharge document — for understanding, not treatment
         decisions.
       </p>
@@ -24,9 +24,7 @@ export function DischargeSections({ summary }: { summary: DischargeSummary }) {
       {blocks.map((b) => (
         <article key={b.title} className="rounded-2xl border border-brand/10 bg-white p-5">
           <h3 className="font-display text-lg font-semibold text-brand">{b.title}</h3>
-          {b.body ? (
-            <p className="mt-2 text-sm leading-relaxed text-brand/85">{b.body}</p>
-          ) : null}
+          {b.body ? <p className="mt-2 text-sm leading-relaxed text-brand/85">{b.body}</p> : null}
           {b.items?.length ? (
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-brand/85">
               {b.items.map((item) => (

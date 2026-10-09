@@ -29,8 +29,9 @@ export function DoctorQuestions({ questions }: { questions: string[] }) {
       <h2 id="doctor-questions-title" className="font-display text-xl font-semibold text-brand">
         Questions for your doctor
       </h2>
-      <p className="text-muted mt-1 text-sm text-brand/70">
-        Bring these to your next appointment. Wording is a starting point — adjust to your situation.
+      <p className="text-muted mt-1 text-sm text-brand/85">
+        Bring these to your next appointment. Wording is a starting point — adjust to your
+        situation.
       </p>
       <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm text-brand/90">
         {questions.map((q) => (
@@ -52,7 +53,7 @@ export function DoctorQuestions({ questions }: { questions: string[] }) {
         >
           Share
         </button>
-        {feedback ? <span className="self-center text-sm text-brand/70">{feedback}</span> : null}
+        {feedback ? <span className="self-center text-sm text-brand/85">{feedback}</span> : null}
       </div>
     </section>
   )
