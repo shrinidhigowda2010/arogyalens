@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.arogyalens.ai.GeminiService;
+import com.arogyalens.demo.DemoDataService;
 import com.arogyalens.dto.VoiceQueryRequest;
 import com.arogyalens.dto.VoiceQueryResponse;
 import com.arogyalens.privacy.PrivacyService;
@@ -89,5 +90,45 @@ class VoiceServiceTest {
         when(gemini.generateText(anyString())).thenReturn(Optional.of("not json"));
         VoiceQueryResponse res = voice.query(new VoiceQueryRequest("hello", null, "en"));
         assertThat(res.answer()).isNotBlank();
+    }
+
+    private String sessionWithDemoReport() {
+        String id = sessions.createId();
+        sessions.save(id, new DemoDataService(new ObjectMapper()).labReport(id), "demo");
+        return id;
+    }
+
+    @Test
+    void groundedFallbackExplainsANamedValueFromTheDocument() {
+        when(gemini.generateText(anyString())).thenReturn(Optional.empty());
+        String id = sessionWithDemoReport();
+
+        VoiceQueryResponse res = voice.query(new VoiceQueryRequest("What is my HbA1c?", id, "en"));
+
+        assertThat(res.fromDocument()).isTrue();
+        assertThat(res.groundedFacts()).anyMatch(f -> f.startsWith("HbA1c = "));
+        assertThat(voice.query(new VoiceQueryRequest("hba1c?", id, "hi")).answer()).isNotBlank();
+    }
+
+    @Test
+    void groundedFallbackSummarisesImportantValuesOrSaysItCannotTell() {
+        when(gemini.generateText(anyString())).thenReturn(Optional.empty());
+        String id = sessionWithDemoReport();
+
+        assertThat(voice.query(new VoiceQueryRequest("What is most important?", id, "en")).answer())
+                .contains("outside the reference ranges");
+        assertThat(
+                        voice.query(new VoiceQueryRequest("Tell me about the weather", id, "en"))
+                                .answer())
+                .contains("couldn't confidently determine");
+    }
+
+    @Test
+    void chatListsNotableDocumentValues() {
+        when(gemini.generateText(anyString())).thenReturn(Optional.empty());
+        String id = sessionWithDemoReport();
+        var chat = voice.chat(new com.arogyalens.dto.ChatRequest(id, "HbA1c?", "en"));
+        assertThat(chat.fromDocument()).isNotEmpty().hasSizeLessThanOrEqualTo(3);
+        assertThat(chat.fromDocument().getFirst()).contains(": ");
     }
 }
