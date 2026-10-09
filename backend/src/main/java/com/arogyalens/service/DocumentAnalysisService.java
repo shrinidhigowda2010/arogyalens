@@ -262,7 +262,7 @@ public class DocumentAnalysisService {
     private ParameterStatus parseStatus(String raw) {
         try {
             return ParameterStatus.valueOf(raw.trim().toUpperCase(Locale.ROOT));
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             return ParameterStatus.UNKNOWN;
         }
     }
@@ -270,7 +270,7 @@ public class DocumentAnalysisService {
     private DocumentType parseType(String raw) {
         try {
             return DocumentType.valueOf(raw.trim().toUpperCase(Locale.ROOT));
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             return DocumentType.UNKNOWN;
         }
     }

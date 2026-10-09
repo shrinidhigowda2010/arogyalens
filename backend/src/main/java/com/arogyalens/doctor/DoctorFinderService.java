@@ -10,6 +10,7 @@ import com.arogyalens.exception.ArogyaLensException;
 import com.arogyalens.privacy.PrivacyService;
 import com.arogyalens.safety.SafetyValidationService;
 import com.arogyalens.util.LanguageUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URLEncoder;
@@ -135,8 +136,8 @@ public class DoctorFinderService {
                             urgent || root.path("urgent").asBoolean(false),
                             "ai");
                 }
-            } catch (Exception e) {
-                // fall through to general physician
+            } catch (JsonProcessingException e) {
+                // malformed AI JSON: fall through to general physician
             }
         }
         return new SpecialtySuggestion(

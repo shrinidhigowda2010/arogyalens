@@ -5,6 +5,7 @@ import com.arogyalens.ai.PromptLibrary;
 import com.arogyalens.dto.AnalysisResponse;
 import com.arogyalens.model.MedicalParameter;
 import com.arogyalens.safety.SafetyValidationService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
@@ -77,7 +78,8 @@ public class DoctorQuestionService {
             root.path("questions")
                     .forEach(n -> list.add(safetyValidationService.enforceSafeWording(n.asText())));
             return list.isEmpty() ? defaultQuestions() : list;
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
+            // malformed AI JSON: use the curated default questions
             return defaultQuestions();
         }
     }

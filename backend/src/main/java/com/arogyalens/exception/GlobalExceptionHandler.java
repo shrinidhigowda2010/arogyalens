@@ -91,7 +91,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex) {
-        LOG.error("Unexpected error", ex);
+        // Log the type only: exception messages can echo request content (possible PII).
+        LOG.error("Unexpected error: {}", ex.getClass().getName());
+        LOG.debug("Unexpected error detail", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(
                         ApiError.of(

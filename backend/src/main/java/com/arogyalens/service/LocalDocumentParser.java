@@ -143,7 +143,8 @@ public class LocalDocumentParser {
                 }
                 return ParameterStatus.WITHIN_RANGE;
             }
-        } catch (Exception ignored) {
+        } catch (NumberFormatException ignored) {
+            // value or range is not numeric: status cannot be determined
             return ParameterStatus.UNKNOWN;
         }
         return ParameterStatus.UNKNOWN;

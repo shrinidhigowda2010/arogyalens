@@ -5,6 +5,7 @@ import com.arogyalens.ai.PromptLibrary;
 import com.arogyalens.dto.TranslateRequest;
 import com.arogyalens.dto.TranslateResponse;
 import com.arogyalens.util.LanguageUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.LinkedHashMap;
@@ -76,7 +77,8 @@ public class TranslationService {
         try {
             JsonNode node = objectMapper.readTree(json);
             return node.path("translated").asText(json);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
+            // the model replied with plain text instead of JSON: use it as-is
             return json;
         }
     }

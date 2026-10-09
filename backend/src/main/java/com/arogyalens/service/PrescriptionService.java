@@ -84,8 +84,8 @@ public class PrescriptionService {
                 List<PrescriptionItem> localItems =
                         localDocumentParser.parsePrescription(text.get());
                 if (!localItems.isEmpty()) {
-                    privacyService.scanAndRedact(text.get());
-                    return wrapItems(id, localItems, false, text.get());
+                    String redacted = privacyService.scanAndRedact(text.get()).redactedText();
+                    return wrapItems(id, localItems, false, redacted);
                 }
             }
 

@@ -148,7 +148,8 @@ class ScanFlowIntegrationTest {
 
     @Test
     void dischargePhoto() throws Exception {
-        when(gemini.generateJson(anyString(), any(byte[].class), anyString(), eq("discharge summary")))
+        when(gemini.generateJson(
+                        anyString(), any(byte[].class), anyString(), eq("discharge summary")))
                 .thenReturn(
                         """
                         {"reasonForAdmission":"Fever","treatmentPerformed":"IV fluids",
