@@ -19,7 +19,7 @@
 
     <properties>
         <jacoco.version>0.8.12</jacoco.version>
-        <jacoco.minimum.line>0.63</jacoco.minimum.line>
+        <jacoco.minimum.line>0.78</jacoco.minimum.line>
         <spotless.version>2.43.0</spotless.version>
         <google-java-format.version>1.23.0</google-java-format.version>
         <checkstyle-plugin.version>3.4.0</checkstyle-plugin.version>
