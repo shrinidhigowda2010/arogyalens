@@ -210,3 +210,12 @@ export interface StoredSession {
 }
 
 export type AnalyzeMode = 'report' | 'medicine' | 'prescription' | 'discharge'
+
+export interface HistoryItem {
+  id: number
+  kind: 'SCAN' | 'CHAT'
+  title: string
+  summary: string
+  language: string
+  createdAt: string
+}

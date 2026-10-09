@@ -74,6 +74,18 @@ const en: Dict = {
     'Do not wait for an online answer if someone has chest pain, trouble breathing, stroke signs, heavy bleeding or is unconscious.',
   sourcesHeading: 'Trusted sources',
   history: 'My history',
+  historyDesc:
+    'Keep a private list of your scans and questions on this device. Names, phone numbers and IDs are masked before anything is saved.',
+  historyToggle: 'Save my scans and questions',
+  historyEmpty: 'Nothing saved yet.',
+  historyOff: 'History is off. Turn it on to save new scans and questions.',
+  historyDelete: 'Delete',
+  historyDeleteAll: 'Delete all history',
+  historyConfirm: 'Delete all saved history? This cannot be undone.',
+  historyDeleted: 'Deleted.',
+  historyScan: 'Scan',
+  historyChat: 'Question',
+  loading: 'Loading…',
 }
 
 const hi: Dict = {

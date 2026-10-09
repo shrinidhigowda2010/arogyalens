@@ -1,3 +1,4 @@
+import { getDeviceId, historyHeaders } from '../lib/history'
 import { prepareUpload } from '../lib/image'
 import type {
   AnalysisResponse,
@@ -6,6 +7,7 @@ import type {
   DoctorSearchRequest,
   DoctorSearchResponse,
   HealthResponse,
+  HistoryItem,
   SpecialtySuggestion,
   TranslateResponse,
   VoiceQueryResponse,
@@ -59,7 +61,7 @@ function url(path: string): string {
 function postJson<T>(path: string, body: unknown): Promise<T> {
   return fetch(url(path), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...historyHeaders() },
     body: JSON.stringify(body),
   }).then((res) => handleResponse<T>(res))
 }
@@ -69,7 +71,9 @@ async function analyze(path: string, file: File, language: AppLanguage): Promise
   const form = new FormData()
   form.append('file', prepared, prepared.name)
   form.append('language', language)
-  return handleResponse(await fetch(url(path), { method: 'POST', body: form }))
+  return handleResponse(
+    await fetch(url(path), { method: 'POST', body: form, headers: historyHeaders() }),
+  )
 }
 
 export async function checkHealth(): Promise<HealthResponse> {
@@ -130,4 +134,26 @@ export async function fetchSpeech(text: string, language: AppLanguage): Promise<
   })
   if (!res.ok) throw await toApiError(res)
   return res.blob()
+}
+
+function deviceHeaders(): Record<string, string> {
+  const id = getDeviceId()
+  return id ? { 'X-Device-Id': id } : {}
+}
+
+/** Lists saved history for this device (empty when the device never opted in). */
+export async function listHistory(): Promise<HistoryItem[]> {
+  if (!getDeviceId()) return []
+  return handleResponse(await fetch(url('/api/history'), { headers: deviceHeaders() }))
+}
+
+export async function deleteHistoryItem(id: number): Promise<void> {
+  const res = await fetch(url(`/api/history/${id}`), { method: 'DELETE', headers: deviceHeaders() })
+  if (!res.ok) throw await toApiError(res)
+}
+
+export async function clearHistory(): Promise<void> {
+  if (!getDeviceId()) return
+  const res = await fetch(url('/api/history'), { method: 'DELETE', headers: deviceHeaders() })
+  if (!res.ok) throw await toApiError(res)
 }
