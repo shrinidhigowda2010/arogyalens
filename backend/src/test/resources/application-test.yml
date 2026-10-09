@@ -4,3 +4,7 @@ arogyalens:
   ai:
     enabled: false
     api-key: ""
+  rate-limit:
+    requests-per-minute: 1000
+  cors:
+    allowed-origins: http://localhost:5173

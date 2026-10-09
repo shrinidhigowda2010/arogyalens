@@ -28,6 +28,7 @@ public class HealthController {
                 "product", "ArogyaLens",
                 "aiConfigured", geminiService.isAvailable(),
                 "demoEnabled", properties.demo().enabled(),
+                "mapsConfigured", properties.maps().isConfigured(),
                 "languages", LanguageUtil.LANGUAGE_NAMES
         );
     }
