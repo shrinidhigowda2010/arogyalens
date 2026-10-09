@@ -1,5 +1,6 @@
 package com.arogyalens.ai;
 
+import java.time.Duration;
 import java.util.Optional;
 
 /**
@@ -28,6 +29,14 @@ public interface AiClient {
 
     /** Best-effort text generation; empty when AI is unavailable or the call fails. */
     Optional<String> generateText(String prompt);
+
+    /**
+     * Best-effort text generation where each model gets at most {@code perModelTimeout} before the
+     * next fallback model is tried.
+     */
+    default Optional<String> generateText(String prompt, Duration perModelTimeout) {
+        return generateText(prompt);
+    }
 
     /** Text-to-speech; returns WAV audio. */
     byte[] synthesizeSpeech(String text);

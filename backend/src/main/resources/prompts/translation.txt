@@ -1,8 +1,11 @@
 
 Task: TranslationPrompt
 Translate the following medical explanation into {{language}}.
-Preserve medical meaning. Prefer natural, understandable wording over literal translation.
-Keep Latin medical terms when helpful, then explain simply.
+Write natural, simple, everyday words that an ordinary patient understands, correctly spelled in the
+usual script of that language. Check the spelling: never repeat a vowel sign or letter by mistake.
+Translate only what is in the text. Do not add, remove or summarise sentences, and do not add advice
+or disclaimers that are not in the source text.
+Keep medicine names, numbers, units, dosages and timings exactly as written.
 
 Text:
 {{text}}

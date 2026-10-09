@@ -96,6 +96,40 @@ class GeminiServiceTest {
     }
 
     @Test
+    void slowModelIsAbandonedAfterThePerModelTimeout() {
+        GeminiService s = service("k", "primary", "backup");
+        server.expect(once(), requestTo(URL.formatted("primary")))
+                .andRespond(
+                        request -> {
+                            try {
+                                Thread.sleep(2_000);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                            return withSuccess(OK_BODY, MediaType.APPLICATION_JSON)
+                                    .createResponse(request);
+                        });
+        server.expect(once(), requestTo(URL.formatted("backup")))
+                .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
+
+        assertThat(s.generateText("slow", java.time.Duration.ofMillis(200)))
+                .hasValueSatisfying(v -> assertThat(v).contains("hi"));
+        // Second identical request is served from the cache without another call.
+        assertThat(s.generateText("slow", java.time.Duration.ofMillis(200))).isPresent();
+        server.verify();
+    }
+
+    @Test
+    void timeCappedTextIsEmptyWhenEveryModelFails() {
+        GeminiService s = service("k", "primary", "");
+        server.expect(once(), requestTo(URL.formatted("primary")))
+                .andRespond(withStatus(HttpStatus.UNAUTHORIZED).body("{}"));
+        assertThat(s.generateText("p", java.time.Duration.ofSeconds(5))).isEmpty();
+        assertThat(service("", "m", "").generateText("p", java.time.Duration.ofSeconds(5)))
+                .isEmpty();
+    }
+
+    @Test
     void retriesOnceWithBackoffOnServerOverload() {
         GeminiService s = service("k", "primary", "");
         server.expect(once(), requestTo(URL.formatted("primary")))

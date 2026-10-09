@@ -8,8 +8,10 @@ import com.arogyalens.util.LanguageUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 
 /** Translates text with Gemini, using the offline language pack as a fallback. */
@@ -20,6 +22,12 @@ public class TranslationService {
     private final LanguageUtil languageUtil;
     private final ObjectMapper objectMapper;
     private final OfflineLanguagePack offlineLanguagePack;
+
+    /** Per-model limit for a translation before the next fallback model is tried. */
+    static final Duration MODEL_TIMEOUT = Duration.ofSeconds(20);
+
+    /** The same vowel sign or mark twice in a row (e.g. "ೆೆ") is never valid in Indic scripts. */
+    private static final Pattern DUPLICATE_MARK = Pattern.compile("(\\p{M})\\1+");
 
     public TranslationService(
             AiClient aiClient,
@@ -62,14 +70,20 @@ public class TranslationService {
         }
 
         String translated =
-                aiClient.generateText(PromptLibrary.translationPrompt(lang, source))
+                aiClient.generateText(PromptLibrary.translationPrompt(lang, source), MODEL_TIMEOUT)
                         .map(this::readTranslated)
+                        .map(TranslationService::fixDuplicateSigns)
                         .orElse(source);
 
         Map<String, String> all = new LinkedHashMap<>();
         all.put("en", source);
         all.put(lang, translated);
         return new TranslateResponse(source, lang, translated, all, request.medicalTerm(), source);
+    }
+
+    /** Removes repeated combining marks that models sometimes emit (e.g. ಮಾತ್ರೆೆ → ಮಾತ್ರೆ). */
+    static String fixDuplicateSigns(String text) {
+        return DUPLICATE_MARK.matcher(text).replaceAll("$1");
     }
 
     private String readTranslated(String json) {

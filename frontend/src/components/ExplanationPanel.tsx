@@ -46,7 +46,10 @@ export function ExplanationPanel({ parameter, explainLang }: ExplanationPanelPro
 
   const remote = fetched?.key === requestKey ? fetched.text : undefined
   const loading = explainLang !== 'en' && !localTranslation && remote === undefined
-  const translated = explainLang === 'en' ? null : (localTranslation ?? remote ?? null)
+  const translatedRaw = explainLang === 'en' ? null : (localTranslation ?? remote ?? null)
+  // The backend returns the source text unchanged when translation is unavailable.
+  const translated = translatedRaw && translatedRaw !== baseText ? translatedRaw : null
+  const translationFailed = explainLang !== 'en' && !loading && translated === null
   const displayText =
     explainLang === 'en' ? baseText : (translated ?? (loading ? 'Translating…' : baseText))
 
@@ -88,8 +91,14 @@ export function ExplanationPanel({ parameter, explainLang }: ExplanationPanelPro
 
       <LanguageSwitcher value={explainLang} onChange={setLanguage} />
 
+      {translationFailed ? (
+        <p role="status" className="text-xs text-brand/85">
+          Translation is not available right now, so the English explanation is shown. Please try
+          again in a moment.
+        </p>
+      ) : null}
       <div
-        lang={explainLang}
+        lang={translated ? explainLang : 'en'}
         aria-live="polite"
         aria-busy={loading}
         className="rounded-xl bg-brand-muted/40 p-4 text-sm leading-relaxed text-brand"

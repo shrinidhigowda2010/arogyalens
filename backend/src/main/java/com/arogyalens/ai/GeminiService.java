@@ -7,11 +7,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.LongConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +64,9 @@ public class GeminiService implements AiClient {
      * better than the firmer default "Kore".
      */
     static final String TTS_VOICE = "Sulafat";
+
+    /** Runs time-capped model calls (virtual threads, so idle waits are cheap). */
+    private static final ExecutorService CALLS = Executors.newVirtualThreadPerTaskExecutor();
 
     public GeminiService(
             ArogyaLensProperties properties,
@@ -171,6 +181,30 @@ public class GeminiService implements AiClient {
         }
     }
 
+    @Override
+    public Optional<String> generateText(String prompt, Duration perModelTimeout) {
+        if (!isAvailable()) {
+            return Optional.empty();
+        }
+        Map<String, Object> body =
+                Map.of(
+                        "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
+                        "generationConfig", jsonConfig());
+        String key = AiResponseCache.key("text", prompt);
+        Optional<String> hit = cache.get(key);
+        if (hit.isPresent()) {
+            return hit;
+        }
+        try {
+            String result = callWithFallback(body, "answer", perModelTimeout);
+            cache.put(key, result);
+            return Optional.of(result);
+        } catch (ArogyaLensException e) {
+            LOG.warn("Optional Gemini text generation failed: {}", e.getCode());
+            return Optional.empty();
+        }
+    }
+
     /**
      * Synthesises speech with Gemini TTS and returns a WAV file (16-bit mono PCM, 24 kHz). Used
      * only when the user's device has no voice for the selected language.
@@ -239,6 +273,11 @@ public class GeminiService implements AiClient {
     }
 
     private String callWithFallback(Map<String, Object> body, String what) {
+        return callWithFallback(body, what, null);
+    }
+
+    private String callWithFallback(
+            Map<String, Object> body, String what, Duration perModelTimeout) {
         List<String> models = modelChain();
         if (models.isEmpty()) {
             throw AiErrors.notConfigured();
@@ -247,7 +286,7 @@ public class GeminiService implements AiClient {
         for (String model : models) {
             for (int attempt = 1; attempt <= 2; attempt++) {
                 try {
-                    return extractText(post(model, body), model, what);
+                    return extractText(postWithin(model, body, perModelTimeout), model, what);
                 } catch (CallFailure failure) {
                     last = failure;
                     if (!failure.kind.tryNextModel) {
@@ -266,6 +305,30 @@ public class GeminiService implements AiClient {
             }
         }
         throw last.toUserError(what);
+    }
+
+    /** Calls {@link #post}, giving up after {@code timeout} (null means the client timeout). */
+    private JsonNode postWithin(String model, Map<String, Object> body, Duration timeout) {
+        if (timeout == null) {
+            return post(model, body);
+        }
+        CompletableFuture<JsonNode> call =
+                CompletableFuture.supplyAsync(() -> post(model, body), CALLS);
+        try {
+            return call.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            call.cancel(true);
+            LOG.warn("Gemini model {} exceeded {} ms", model, timeout.toMillis());
+            throw new CallFailure(Kind.TIMEOUT);
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof CallFailure failure) {
+                throw failure;
+            }
+            throw new CallFailure(Kind.FAILURE);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new CallFailure(Kind.TIMEOUT);
+        }
     }
 
     private JsonNode post(String model, Map<String, Object> body) {

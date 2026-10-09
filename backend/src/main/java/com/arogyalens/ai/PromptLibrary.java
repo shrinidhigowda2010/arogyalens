@@ -45,7 +45,7 @@ public final class PromptLibrary {
 
     /** Translates a medical explanation into the target language. */
     public static String translationPrompt(String targetLanguage, String text) {
-        return task("translation", vars("language", targetLanguage, "text", text));
+        return task("translation", vars("language", languageName(targetLanguage), "text", text));
     }
 
     /** Generates non-diagnostic questions for a doctor visit from document context. */

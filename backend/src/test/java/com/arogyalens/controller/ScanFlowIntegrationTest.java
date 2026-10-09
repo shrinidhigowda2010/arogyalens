@@ -176,12 +176,15 @@ class ScanFlowIntegrationTest {
                                 .content("{\"query\":\"what is fever\",\"language\":\"hi\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.answer").isNotEmpty());
+        when(gemini.generateText(anyString(), any(java.time.Duration.class)))
+                .thenReturn(Optional.of("{\"translated\":\"ಮಾತ್ರೆೆ 500 mg\"}"));
         mockMvc.perform(
                         post("/api/translate")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content("{\"text\":\"Fever\",\"targetLanguage\":\"hi\"}"))
+                                .content(
+                                        "{\"text\":\"Zorvexa tablet 500 mg\",\"targetLanguage\":\"kn\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.translated").isNotEmpty());
+                .andExpect(jsonPath("$.translated").value("ಮಾತ್ರೆ 500 mg"));
     }
 
     @Test
