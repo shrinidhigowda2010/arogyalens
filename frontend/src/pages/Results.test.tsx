@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useApp } from '../hooks/useApp'
 import { axe } from '../test/axe'
@@ -14,13 +14,11 @@ import Results from './Results'
 
 /** Puts a demo analysis (captured from the backend's demo mode) into context, then shows Results. */
 function WithAnalysis({ data }: { data: AnalysisResponse }) {
-  const { setAnalysis } = useApp()
-  const [ready, setReady] = useState(false)
+  const { analysis, setAnalysis } = useApp()
   useEffect(() => {
     setAnalysis(data)
-    setReady(true)
   }, [data, setAnalysis])
-  return ready ? <Results /> : null
+  return analysis ? <Results /> : null
 }
 
 beforeEach(() => vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({}))))
