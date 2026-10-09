@@ -51,7 +51,14 @@ export function detectLanguage(text: string, current: AppLanguage): AppLanguage 
 let currentAudio: HTMLAudioElement | null = null
 
 /** Stops any speech that is playing (device voice or cloud audio). */
+/** Cloud voice requests slower than this fall back to the device voice. */
+export const CLOUD_TIMEOUT_MS = 8000
+
+/** Incremented on every stop/start so a late cloud response never plays after Stop. */
+let generation = 0
+
 export function stopSpeaking(): void {
+  generation += 1
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel()
   if (currentAudio) {
     currentAudio.pause()
@@ -59,44 +66,75 @@ export function stopSpeaking(): void {
   }
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timeout')), ms)
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error: unknown) => {
+        clearTimeout(timer)
+        reject(error instanceof Error ? error : new Error(String(error)))
+      },
+    )
+  })
+}
+
+async function playCloud(blob: Blob, onEnd?: () => void): Promise<void> {
+  const url = URL.createObjectURL(blob)
+  const audio = new Audio(url)
+  currentAudio = audio
+  const finish = () => {
+    URL.revokeObjectURL(url)
+    onEnd?.()
+  }
+  audio.onended = finish
+  audio.onerror = finish
+  await audio.play()
+}
+
+function speakOnDevice(text: string, language: AppLanguage, onEnd?: () => void): boolean {
+  const synth =
+    typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null
+  if (!synth) return false
+  const voice = findVoice(language, synth.getVoices())
+  if (!voice && language !== 'en') return false
+  const utter = new SpeechSynthesisUtterance(text)
+  utter.lang = speechLocale(language)
+  if (voice) utter.voice = voice
+  utter.onend = () => onEnd?.()
+  utter.onerror = () => onEnd?.()
+  synth.speak(utter)
+  return true
+}
+
 /**
- * Reads text aloud. Uses an on-device voice for the language when available, otherwise
- * falls back to Gemini text-to-speech served by the backend.
+ * Reads text aloud. Prefers the natural Gemini text-to-speech voice from the backend and falls
+ * back to an on-device voice when the cloud request fails or takes longer than
+ * {@link CLOUD_TIMEOUT_MS}.
  *
- * @returns how the text was spoken, or 'unsupported'
+ * @returns how the text was spoken, 'cancelled' if stopped while loading, or 'unsupported'
  */
 export async function speak(
   text: string,
   language: AppLanguage,
   fetchCloudAudio: (text: string, language: AppLanguage) => Promise<Blob>,
   onEnd?: () => void,
-): Promise<'device' | 'cloud' | 'unsupported'> {
+): Promise<'device' | 'cloud' | 'cancelled' | 'unsupported'> {
   stopSpeaking()
   if (!text.trim()) return 'unsupported'
-  const synth =
-    typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null
-  const voice = synth ? findVoice(language, synth.getVoices()) : null
-  if (synth && (voice || language === 'en')) {
-    const utter = new SpeechSynthesisUtterance(text)
-    utter.lang = speechLocale(language)
-    if (voice) utter.voice = voice
-    utter.onend = () => onEnd?.()
-    utter.onerror = () => onEnd?.()
-    synth.speak(utter)
-    return 'device'
-  }
+  const mine = generation
   try {
-    const blob = await fetchCloudAudio(text, language)
-    const url = URL.createObjectURL(blob)
-    const audio = new Audio(url)
-    currentAudio = audio
-    audio.onended = () => {
-      URL.revokeObjectURL(url)
-      onEnd?.()
-    }
-    await audio.play()
+    const blob = await withTimeout(fetchCloudAudio(text, language), CLOUD_TIMEOUT_MS)
+    if (mine !== generation) return 'cancelled'
+    await playCloud(blob, onEnd)
     return 'cloud'
   } catch {
+    if (mine !== generation) return 'cancelled'
+    currentAudio = null
+    if (speakOnDevice(text, language, onEnd)) return 'device'
     onEnd?.()
     return 'unsupported'
   }

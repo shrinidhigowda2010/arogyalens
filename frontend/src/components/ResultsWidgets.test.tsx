@@ -56,37 +56,63 @@ describe('sharing widgets', () => {
   })
 })
 
+function stubDeviceVoice() {
+  const synth = {
+    speak: vi.fn(),
+    cancel: vi.fn(),
+    getVoices: () => [{ lang: 'en-IN', name: 'English India' }],
+  }
+  vi.stubGlobal('speechSynthesis', synth)
+  vi.stubGlobal(
+    'SpeechSynthesisUtterance',
+    class {
+      text: string
+      lang = ''
+      voice: unknown = null
+      onend: (() => void) | null = null
+      onerror: (() => void) | null = null
+      constructor(text: string) {
+        this.text = text
+      }
+    },
+  )
+  return synth
+}
+
 describe('AudioPlayer', () => {
-  it('reads text aloud with a device voice and can stop', async () => {
-    const speak = vi.fn()
-    const cancel = vi.fn()
-    vi.stubGlobal('speechSynthesis', {
-      speak,
-      cancel,
-      getVoices: () => [{ lang: 'en-IN', name: 'English India' }],
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    })
+  it('plays the natural cloud voice first', async () => {
+    const synth = stubDeviceVoice()
+    const play = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal(
-      'SpeechSynthesisUtterance',
+      'Audio',
       class {
-        text: string
-        lang = ''
-        voice: unknown = null
-        rate = 1
-        onend: (() => void) | null = null
+        onended: (() => void) | null = null
         onerror: (() => void) | null = null
-        constructor(text: string) {
-          this.text = text
-        }
+        play = play
+        pause = vi.fn()
       },
     )
+    vi.stubGlobal('URL', { createObjectURL: () => 'blob:x', revokeObjectURL: vi.fn() })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response(new Blob(['RIFF']), { status: 200 })),
+    )
+    renderWithApp(<AudioPlayer text="Hello there" language="hi" />)
+    await userEvent.click(screen.getByRole('button'))
+    await vi.waitFor(() => expect(play).toHaveBeenCalled())
+    expect(synth.speak).not.toHaveBeenCalled()
+    expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('falls back to the device voice when the cloud voice fails, and can stop', async () => {
+    const synth = stubDeviceVoice()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('busy', { status: 503 })))
     renderWithApp(<AudioPlayer text="Hello there" language="en" />)
     const button = screen.getByRole('button')
     await userEvent.click(button)
-    expect(speak).toHaveBeenCalled()
+    await vi.waitFor(() => expect(synth.speak).toHaveBeenCalled())
     expect(button).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(button)
-    expect(cancel).toHaveBeenCalled()
+    expect(synth.cancel).toHaveBeenCalled()
   })
 })
