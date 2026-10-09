@@ -40,6 +40,9 @@ public class SessionService {
 
     public Optional<AnalysisResponse> get(String sessionId) {
         cleanup();
+        if (sessionId == null || sessionId.isBlank()) {
+            return Optional.empty();
+        }
         SessionRecord record = sessions.get(sessionId);
         if (record == null) {
             return Optional.empty();
@@ -48,6 +51,9 @@ public class SessionService {
     }
 
     public String context(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return "";
+        }
         SessionRecord record = sessions.get(sessionId);
         return record == null ? "" : record.contextText();
     }

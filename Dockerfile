@@ -22,7 +22,7 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=api /app/app.jar ./app.jar
 ENV AI_ENABLED=true \
-    GEMINI_MODEL=gemini-flash-latest \
+    GEMINI_MODEL=gemini-3-flash-preview \
     DEMO_ENABLED=false \
     JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75"
 # Cloud Run provides $PORT (defaults to 8080)

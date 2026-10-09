@@ -42,8 +42,12 @@ public class VoiceService {
 
     public VoiceQueryResponse query(VoiceQueryRequest request) {
         String language = languageUtil.normalize(request.language());
-        AnalysisResponse analysis = sessionService.require(request.sessionId());
+        // sessionId is optional: without an uploaded document this works as a general health Q&A.
+        AnalysisResponse analysis = sessionService.get(request.sessionId()).orElse(null);
         String context = sessionService.context(request.sessionId());
+        if (context.isBlank()) {
+            context = "(No document uploaded. Give general, non-diagnostic health information.)";
+        }
 
         Optional<String> ai = geminiService.generateText(
                 PromptLibrary.voiceAssistantPrompt(context, request.query(), language)
@@ -62,7 +66,7 @@ public class VoiceService {
                         language,
                         facts,
                         safety.notes(),
-                        root.path("fromDocument").asBoolean(true)
+                        analysis != null && root.path("fromDocument").asBoolean(true)
                 );
             } catch (Exception ignored) {
                 // fall through
@@ -78,9 +82,9 @@ public class VoiceService {
                 request.sessionId(),
                 request.language()
         ));
-        AnalysisResponse analysis = sessionService.require(request.sessionId());
+        AnalysisResponse analysis = sessionService.get(request.sessionId()).orElse(null);
         List<String> fromDoc = new ArrayList<>();
-        if (analysis.parameters() != null) {
+        if (analysis != null && analysis.parameters() != null) {
             analysis.parameters().stream()
                     .filter(p -> p.status() != com.arogyalens.model.ParameterStatus.WITHIN_RANGE)
                     .limit(3)
@@ -99,6 +103,13 @@ public class VoiceService {
         String q = query.toLowerCase(Locale.ROOT);
         String answer;
         List<String> facts = new ArrayList<>();
+
+        if (analysis == null) {
+            answer = "I couldn't answer that right now. Please try again in a moment, "
+                    + "or upload a document so I can explain it, and discuss health questions with your healthcare professional.";
+            var safety = safetyValidationService.validate(answer);
+            return new VoiceQueryResponse(query, safety.sanitizedText(), language, facts, safety.notes(), false);
+        }
 
         MedicalParameter match = null;
         if (analysis.parameters() != null) {

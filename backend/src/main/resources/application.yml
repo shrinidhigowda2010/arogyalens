@@ -19,8 +19,10 @@ arogyalens:
   ai:
     provider: gemini
     api-key: ${GEMINI_API_KEY:}
-    model: ${GEMINI_MODEL:gemini-2.0-flash}
-    timeout-ms: ${AI_TIMEOUT_MS:20000}
+    model: ${GEMINI_MODEL:gemini-3-flash-preview}
+    # Tried in order when the primary model returns 429/404/5xx or times out
+    fallback-models: ${GEMINI_FALLBACK_MODELS:gemini-flash-latest,gemini-flash-lite-latest}
+    timeout-ms: ${AI_TIMEOUT_MS:45000}
     enabled: ${AI_ENABLED:true}
   files:
     max-size-mb: 15
