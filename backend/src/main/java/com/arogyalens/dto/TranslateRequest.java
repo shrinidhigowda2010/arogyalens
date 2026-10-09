@@ -6,6 +6,4 @@ public record TranslateRequest(
         @NotBlank String text,
         @NotBlank String targetLanguage,
         String medicalTerm,
-        String context
-) {
-}
+        String context) {}

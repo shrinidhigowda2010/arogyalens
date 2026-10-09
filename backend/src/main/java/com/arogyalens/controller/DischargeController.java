@@ -1,8 +1,8 @@
 package com.arogyalens.controller;
 
+import com.arogyalens.dto.AnalysisResponse;
 import com.arogyalens.history.HistoryController;
 import com.arogyalens.history.HistoryService;
-import com.arogyalens.dto.AnalysisResponse;
 import com.arogyalens.service.DischargeSummaryService;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,7 +19,8 @@ public class DischargeController {
     private final DischargeSummaryService dischargeSummaryService;
     private final HistoryService historyService;
 
-    public DischargeController(DischargeSummaryService dischargeSummaryService, HistoryService historyService) {
+    public DischargeController(
+            DischargeSummaryService dischargeSummaryService, HistoryService historyService) {
         this.dischargeSummaryService = dischargeSummaryService;
         this.historyService = historyService;
     }
@@ -29,8 +30,8 @@ public class DischargeController {
             @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "demo", defaultValue = "false") boolean demo,
             @RequestParam(value = "language", defaultValue = "en") String language,
-            @RequestHeader(value = HistoryController.DEVICE_HEADER, required = false) String deviceId
-    ) {
+            @RequestHeader(value = HistoryController.DEVICE_HEADER, required = false)
+                    String deviceId) {
         AnalysisResponse response = dischargeSummaryService.analyze(file, demo);
         historyService.recordScan(deviceId, response, language);
         return response;

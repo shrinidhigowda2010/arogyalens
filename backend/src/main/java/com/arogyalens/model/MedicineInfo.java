@@ -12,6 +12,4 @@ public record MedicineInfo(
         List<String> precautions,
         List<String> warnings,
         double confidence,
-        List<TrustedSource> sources
-) {
-}
+        List<TrustedSource> sources) {}

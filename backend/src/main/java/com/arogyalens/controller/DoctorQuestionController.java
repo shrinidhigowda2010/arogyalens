@@ -3,13 +3,12 @@ package com.arogyalens.controller;
 import com.arogyalens.dto.DoctorQuestionsRequest;
 import com.arogyalens.service.DoctorQuestionService;
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.Map;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/doctor-questions")

@@ -18,61 +18,85 @@ import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
- * Converts every error into the consistent {@link ApiError} JSON shape.
- * Stack traces and internal details are logged server-side only, never returned to clients.
+ * Converts every error into the consistent {@link ApiError} JSON shape. Stack traces and internal
+ * details are logged server-side only, never returned to clients.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ArogyaLensException.class)
     public ResponseEntity<ApiError> handleApp(ArogyaLensException ex) {
-        log.warn("Handled application error: {} ({})", ex.getCode(), ex.getStatus().value());
+        LOG.warn("Handled application error: {} ({})", ex.getCode(), ex.getStatus().value());
         return ResponseEntity.status(ex.getStatus())
                 .body(ApiError.of(ex.getCode(), ex.getMessage(), ex.getUserMessage()));
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiError> handleSize(MaxUploadSizeExceededException ex) {
-        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(
-                ApiError.of("FILE_TOO_LARGE", "Upload exceeds limit",
-                        "The file is too large. Please upload a file under 15 MB."));
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(
+                        ApiError.of(
+                                "FILE_TOO_LARGE",
+                                "Upload exceeds limit",
+                                "The file is too large. Please upload a file under 15 MB."));
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class,
-            MissingServletRequestParameterException.class, MethodArgumentTypeMismatchException.class,
-            MultipartException.class})
+    @ExceptionHandler({
+        MethodArgumentNotValidException.class,
+        HttpMessageNotReadableException.class,
+        MissingServletRequestParameterException.class,
+        MethodArgumentTypeMismatchException.class,
+        MultipartException.class
+    })
     public ResponseEntity<ApiError> handleValidation(Exception ex) {
-        return ResponseEntity.badRequest().body(
-                ApiError.of("VALIDATION_ERROR", "Invalid request",
-                        "Please check your input and try again."));
+        return ResponseEntity.badRequest()
+                .body(
+                        ApiError.of(
+                                "VALIDATION_ERROR",
+                                "Invalid request",
+                                "Please check your input and try again."));
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ApiError> handleMediaType(HttpMediaTypeNotSupportedException ex) {
-        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(
-                ApiError.of("UNSUPPORTED_MEDIA_TYPE", "Unsupported content type",
-                        "This request format is not supported."));
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(
+                        ApiError.of(
+                                "UNSUPPORTED_MEDIA_TYPE",
+                                "Unsupported content type",
+                                "This request format is not supported."));
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiError> handleMethod(HttpRequestMethodNotSupportedException ex) {
-        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(
-                ApiError.of("METHOD_NOT_ALLOWED", "Method not allowed", "This action is not supported."));
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(
+                        ApiError.of(
+                                "METHOD_NOT_ALLOWED",
+                                "Method not allowed",
+                                "This action is not supported."));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(NoResourceFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                ApiError.of("NOT_FOUND", "Not found", "We couldn't find that page or resource."));
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(
+                        ApiError.of(
+                                "NOT_FOUND",
+                                "Not found",
+                                "We couldn't find that page or resource."));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex) {
-        log.error("Unexpected error", ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                ApiError.of("INTERNAL_ERROR", "Unexpected error",
-                        "Something went wrong while processing your request. Please try again."));
+        LOG.error("Unexpected error", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(
+                        ApiError.of(
+                                "INTERNAL_ERROR",
+                                "Unexpected error",
+                                "Something went wrong while processing your request. Please try again."));
     }
 }

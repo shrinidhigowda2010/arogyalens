@@ -3,6 +3,10 @@ package com.arogyalens.history;
 import com.arogyalens.dto.AnalysisResponse;
 import com.arogyalens.exception.ArogyaLensException;
 import com.arogyalens.privacy.PrivacyService;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.List;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,20 +15,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.util.List;
-import java.util.regex.Pattern;
-
 /**
- * Opt-in "My history". The browser sends an anonymous {@code X-Device-Id} only when the
- * user turns history on; everything is PII-masked again before it is stored, and users
- * can delete one item or everything. Recording never fails the user's request.
+ * Opt-in "My history". The browser sends an anonymous {@code X-Device-Id} only when the user turns
+ * history on; everything is PII-masked again before it is stored, and users can delete one item or
+ * everything. Recording never fails the user's request.
  */
 @Service
 public class HistoryService {
 
-    private static final Logger log = LoggerFactory.getLogger(HistoryService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(HistoryService.class);
     private static final Pattern DEVICE_ID = Pattern.compile("^[A-Za-z0-9-]{16,64}$");
     private static final int MAX_SUMMARY = 4000;
     private static final int MAX_TITLE = 200;
@@ -35,10 +34,11 @@ public class HistoryService {
     private final int maxEntries;
     private final Clock clock;
 
-    public HistoryService(HistoryRepository repository,
-                          PrivacyService privacyService,
-                          @Value("${arogyalens.history.enabled:true}") boolean enabled,
-                          @Value("${arogyalens.history.max-entries-per-device:50}") int maxEntries) {
+    public HistoryService(
+            HistoryRepository repository,
+            PrivacyService privacyService,
+            @Value("${arogyalens.history.enabled:true}") boolean enabled,
+            @Value("${arogyalens.history.max-entries-per-device:50}") int maxEntries) {
         this.repository = repository;
         this.privacyService = privacyService;
         this.enabled = enabled;
@@ -47,10 +47,21 @@ public class HistoryService {
     }
 
     /** Public view of a stored entry. */
-    public record HistoryItem(Long id, String kind, String title, String summary, String language, Instant createdAt) {
+    public record HistoryItem(
+            Long id,
+            String kind,
+            String title,
+            String summary,
+            String language,
+            Instant createdAt) {
         static HistoryItem of(HistoryEntry e) {
-            return new HistoryItem(e.getId(), e.getKind().name(), e.getTitle(), e.getSummary(),
-                    e.getLanguage(), e.getCreatedAt());
+            return new HistoryItem(
+                    e.getId(),
+                    e.getKind().name(),
+                    e.getTitle(),
+                    e.getSummary(),
+                    e.getLanguage(),
+                    e.getCreatedAt());
         }
     }
 
@@ -73,9 +84,15 @@ public class HistoryService {
         String summary = analysis.familySummary();
         if (summary == null || summary.isBlank()) {
             var d = analysis.dashboard();
-            summary = d == null ? "Analysis completed."
-                    : "%d values found: %d within range, %d to discuss, %d need attention."
-                    .formatted(d.total(), d.withinRange(), d.needsDiscussion(), d.importantAttention());
+            summary =
+                    d == null
+                            ? "Analysis completed."
+                            : "%d values found: %d within range, %d to discuss, %d need attention."
+                                    .formatted(
+                                            d.total(),
+                                            d.withinRange(),
+                                            d.needsDiscussion(),
+                                            d.importantAttention());
         }
         save(deviceId, HistoryEntry.Kind.SCAN, title, summary, language);
     }
@@ -92,15 +109,21 @@ public class HistoryService {
     @Transactional(readOnly = true)
     public List<HistoryItem> list(String deviceId) {
         requireDevice(deviceId);
-        return repository.findByDeviceIdOrderByCreatedAtDescIdDesc(deviceId, PageRequest.of(0, maxEntries))
-                .stream().map(HistoryItem::of).toList();
+        return repository
+                .findByDeviceIdOrderByCreatedAtDescIdDesc(deviceId, PageRequest.of(0, maxEntries))
+                .stream()
+                .map(HistoryItem::of)
+                .toList();
     }
 
     /** Deletes one entry; returns 404 when it does not belong to the device. */
     public void delete(String deviceId, long id) {
         requireDevice(deviceId);
         if (repository.deleteByIdAndDeviceId(id, deviceId) == 0) {
-            throw new ArogyaLensException("HISTORY_NOT_FOUND", "History item not found", "That history item no longer exists.",
+            throw new ArogyaLensException(
+                    "HISTORY_NOT_FOUND",
+                    "History item not found",
+                    "That history item no longer exists.",
                     HttpStatus.NOT_FOUND);
         }
     }
@@ -117,31 +140,46 @@ public class HistoryService {
 
     private void requireDevice(String deviceId) {
         if (!enabled) {
-            throw new ArogyaLensException("HISTORY_DISABLED", "History disabled", "History is turned off on this server.",
+            throw new ArogyaLensException(
+                    "HISTORY_DISABLED",
+                    "History disabled",
+                    "History is turned off on this server.",
                     HttpStatus.NOT_FOUND);
         }
         if (!isValidDeviceId(deviceId)) {
-            throw new ArogyaLensException("DEVICE_ID_REQUIRED", "Missing or invalid X-Device-Id", "Turn on history to use this feature.",
+            throw new ArogyaLensException(
+                    "DEVICE_ID_REQUIRED",
+                    "Missing or invalid X-Device-Id",
+                    "Turn on history to use this feature.",
                     HttpStatus.BAD_REQUEST);
         }
     }
 
-    private void save(String deviceId, HistoryEntry.Kind kind, String title, String summary, String language) {
+    private void save(
+            String deviceId,
+            HistoryEntry.Kind kind,
+            String title,
+            String summary,
+            String language) {
         try {
-            repository.save(new HistoryEntry(deviceId, kind,
-                    truncate(mask(title), MAX_TITLE),
-                    truncate(mask(summary), MAX_SUMMARY),
-                    language == null || language.isBlank() ? "en" : truncate(language, 8),
-                    Instant.now(clock)));
+            repository.save(
+                    new HistoryEntry(
+                            deviceId,
+                            kind,
+                            truncate(mask(title), MAX_TITLE),
+                            truncate(mask(summary), MAX_SUMMARY),
+                            language == null || language.isBlank() ? "en" : truncate(language, 8),
+                            Instant.now(clock)));
             prune(deviceId);
         } catch (RuntimeException ex) {
-            log.warn("History write skipped: {}", ex.getClass().getSimpleName());
+            LOG.warn("History write skipped: {}", ex.getClass().getSimpleName());
         }
     }
 
     private void prune(String deviceId) {
-        List<HistoryEntry> overflow = repository.findByDeviceIdOrderByCreatedAtDescIdDesc(
-                deviceId, PageRequest.of(1, maxEntries));
+        List<HistoryEntry> overflow =
+                repository.findByDeviceIdOrderByCreatedAtDescIdDesc(
+                        deviceId, PageRequest.of(1, maxEntries));
         if (!overflow.isEmpty()) {
             repository.deleteAll(overflow);
         }

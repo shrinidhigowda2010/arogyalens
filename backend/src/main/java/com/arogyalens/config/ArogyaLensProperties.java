@@ -1,14 +1,12 @@
 package com.arogyalens.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Typed application configuration bound from the {@code arogyalens.*} namespace.
- * Every nested record tolerates missing values so a partial configuration never
- * crashes the application context.
+ * Typed application configuration bound from the {@code arogyalens.*} namespace. Every nested
+ * record tolerates missing values so a partial configuration never crashes the application context.
  */
 @ConfigurationProperties(prefix = "arogyalens")
 public record ArogyaLensProperties(
@@ -22,16 +20,21 @@ public record ArogyaLensProperties(
         Demo demo,
         Features features,
         Privacy privacy,
-        Session session
-) {
+        Session session) {
 
     public ArogyaLensProperties {
         cors = cors == null ? new Cors(null) : cors;
-        ai = ai == null ? new Ai("gemini", "", "gemini-flash-latest", null, null, 45_000, false) : ai;
+        ai =
+                ai == null
+                        ? new Ai("gemini", "", "gemini-flash-latest", null, null, 45_000, false)
+                        : ai;
         cache = cache == null ? new Cache(200, 900) : cache;
         rateLimit = rateLimit == null ? new RateLimit(20) : rateLimit;
         maps = maps == null ? new Maps("") : maps;
-        files = files == null ? new Files(15, "image/jpeg,image/png,image/webp,application/pdf") : files;
+        files =
+                files == null
+                        ? new Files(15, "image/jpeg,image/png,image/webp,application/pdf")
+                        : files;
         languages = languages == null ? new Languages("en,hi,kn,ta,te,mr,bn", "en") : languages;
         demo = demo == null ? new Demo(false) : demo;
         features = features == null ? new Features(true, true, true) : features;
@@ -43,10 +46,7 @@ public record ArogyaLensProperties(
         if (raw == null || raw.isBlank()) {
             return List.of();
         }
-        return Arrays.stream(raw.split(","))
-                .map(String::strip)
-                .filter(s -> !s.isEmpty())
-                .toList();
+        return Arrays.stream(raw.split(",")).map(String::strip).filter(s -> !s.isEmpty()).toList();
     }
 
     /** CORS settings; origins come from the ALLOWED_ORIGINS environment variable. */
@@ -58,8 +58,14 @@ public record ArogyaLensProperties(
     }
 
     /** Gemini settings. */
-    public record Ai(String provider, String apiKey, String model, String fallbackModels,
-                     String ttsModel, long timeoutMs, boolean enabled) {
+    public record Ai(
+            String provider,
+            String apiKey,
+            String model,
+            String fallbackModels,
+            String ttsModel,
+            long timeoutMs,
+            boolean enabled) {
         public boolean isConfigured() {
             return enabled && apiKey != null && !apiKey.isBlank();
         }

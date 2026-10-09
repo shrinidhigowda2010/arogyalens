@@ -2,23 +2,22 @@ package com.arogyalens.util;
 
 import com.arogyalens.config.ArogyaLensProperties;
 import com.arogyalens.exception.ArogyaLensException;
-import org.springframework.stereotype.Component;
-
 import java.util.Locale;
 import java.util.Map;
+import org.springframework.stereotype.Component;
 
 @Component
 public class LanguageUtil {
 
-    public static final Map<String, String> LANGUAGE_NAMES = Map.of(
-            "en", "English",
-            "hi", "Hindi",
-            "kn", "Kannada",
-            "ta", "Tamil",
-            "te", "Telugu",
-            "mr", "Marathi",
-            "bn", "Bengali"
-    );
+    public static final Map<String, String> LANGUAGE_NAMES =
+            Map.of(
+                    "en", "English",
+                    "hi", "Hindi",
+                    "kn", "Kannada",
+                    "ta", "Tamil",
+                    "te", "Telugu",
+                    "mr", "Marathi",
+                    "bn", "Bengali");
 
     private final ArogyaLensProperties properties;
 
@@ -35,13 +34,16 @@ public class LanguageUtil {
             throw new ArogyaLensException(
                     "UNSUPPORTED_LANGUAGE",
                     "Unsupported language: " + language,
-                    "That language is not supported yet. Please choose English, Hindi, Kannada, Tamil, Telugu, Marathi, or Bengali."
-            );
+                    "That language is not supported yet. Please choose English, Hindi, Kannada, Tamil, Telugu, Marathi, or Bengali.");
         }
         return code;
     }
 
     public boolean isSupported(String language) {
-        return language != null && properties.languages().supportedList().contains(language.toLowerCase(Locale.ROOT));
+        return language != null
+                && properties
+                        .languages()
+                        .supportedList()
+                        .contains(language.toLowerCase(Locale.ROOT));
     }
 }

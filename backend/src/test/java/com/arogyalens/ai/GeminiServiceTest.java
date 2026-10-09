@@ -1,21 +1,5 @@
 package com.arogyalens.ai;
 
-import com.arogyalens.config.ArogyaLensProperties;
-import com.arogyalens.exception.ArogyaLensException;
-import com.arogyalens.support.TestProps;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.client.MockRestServiceServer;
-import org.springframework.web.client.RestClient;
-
-import java.time.Clock;
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.ExpectedCount.once;
@@ -25,11 +9,28 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import com.arogyalens.config.ArogyaLensProperties;
+import com.arogyalens.exception.ArogyaLensException;
+import com.arogyalens.support.TestProps;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Clock;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
+
 /** Tests the Gemini client against a mocked HTTP layer; no real API calls are made. */
 class GeminiServiceTest {
 
-    private static final String URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent";
-    private static final String OK_BODY = """
+    private static final String URL =
+            "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent";
+    private static final String OK_BODY =
+            """
             {"candidates":[{"content":{"parts":[
               {"text":"thinking...","thought":true},
               {"text":"```json\\n{\\"answer\\":"},
@@ -43,8 +44,12 @@ class GeminiServiceTest {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
         ArogyaLensProperties props = TestProps.withAi(key, model, fallbacks);
-        GeminiService s = new GeminiService(props, builder, new ObjectMapper(),
-                new AiResponseCache(50, 60_000, Clock.systemUTC()));
+        GeminiService s =
+                new GeminiService(
+                        props,
+                        builder,
+                        new ObjectMapper(),
+                        new AiResponseCache(50, 60_000, Clock.systemUTC()));
         sleeps = new ArrayList<>();
         s.setSleeper(sleeps::add);
         return s;
@@ -79,7 +84,9 @@ class GeminiServiceTest {
     void fallsBackToNextModelOnQuotaError() {
         GeminiService s = service("k", "primary", "backup");
         server.expect(once(), requestTo(URL.formatted("primary")))
-                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).body("{\"error\":{\"code\":429}}"));
+                .andRespond(
+                        withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                                .body("{\"error\":{\"code\":429}}"));
         server.expect(once(), requestTo(URL.formatted("backup")))
                 .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
 
@@ -104,11 +111,14 @@ class GeminiServiceTest {
     void invalidKeyFailsFastWithoutTryingFallbacks() {
         GeminiService s = service("bad", "primary", "backup");
         server.expect(once(), requestTo(URL.formatted("primary")))
-                .andRespond(withStatus(HttpStatus.BAD_REQUEST).body("{\"reason\":\"API_KEY_INVALID\"}"));
+                .andRespond(
+                        withStatus(HttpStatus.BAD_REQUEST)
+                                .body("{\"reason\":\"API_KEY_INVALID\"}"));
 
         assertThatThrownBy(() -> s.generateJson("p"))
                 .isInstanceOf(ArogyaLensException.class)
-                .extracting("code").isEqualTo(AiErrors.KEY_INVALID);
+                .extracting("code")
+                .isEqualTo(AiErrors.KEY_INVALID);
         server.verify();
     }
 
@@ -120,20 +130,23 @@ class GeminiServiceTest {
         server.expect(once(), requestTo(URL.formatted("backup")))
                 .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
 
-        assertThatThrownBy(() -> s.generateJson("p"))
-                .extracting("code").isEqualTo(AiErrors.QUOTA);
+        assertThatThrownBy(() -> s.generateJson("p")).extracting("code").isEqualTo(AiErrors.QUOTA);
     }
 
     @Test
     void emptyAnswerIsReportedAsUnreadable() {
         GeminiService s = service("k", "primary", "");
         server.expect(once(), requestTo(URL.formatted("primary")))
-                .andRespond(withSuccess("{\"candidates\":[{\"finishReason\":\"SAFETY\"}]}", MediaType.APPLICATION_JSON));
+                .andRespond(
+                        withSuccess(
+                                "{\"candidates\":[{\"finishReason\":\"SAFETY\"}]}",
+                                MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> s.generateJson("p", new byte[]{1}, "image/png", "medicine label"))
+        assertThatThrownBy(() -> s.generateJson("p", new byte[] {1}, "image/png", "medicine label"))
                 .isInstanceOf(ArogyaLensException.class)
                 .hasMessageContaining("medicine label")
-                .extracting("code").isEqualTo(AiErrors.EMPTY);
+                .extracting("code")
+                .isEqualTo(AiErrors.EMPTY);
     }
 
     @Test
@@ -151,7 +164,9 @@ class GeminiServiceTest {
         GeminiService s = service("   ", "primary", "");
         assertThat(s.isAvailable()).isFalse();
         assertThat(s.generateText("p")).isEmpty();
-        assertThatThrownBy(() -> s.generateJson("p")).extracting("code").isEqualTo(AiErrors.NOT_CONFIGURED);
+        assertThatThrownBy(() -> s.generateJson("p"))
+                .extracting("code")
+                .isEqualTo(AiErrors.NOT_CONFIGURED);
     }
 
     @Test
@@ -166,7 +181,8 @@ class GeminiServiceTest {
         assertThat(GeminiService.classify(404, "")).isEqualTo(GeminiService.Kind.MODEL_MISSING);
         assertThat(GeminiService.classify(503, "")).isEqualTo(GeminiService.Kind.BUSY);
         assertThat(GeminiService.classify(403, "")).isEqualTo(GeminiService.Kind.KEY_INVALID);
-        assertThat(GeminiService.classify(400, "Unable to process input image")).isEqualTo(GeminiService.Kind.BAD_INPUT);
+        assertThat(GeminiService.classify(400, "Unable to process input image"))
+                .isEqualTo(GeminiService.Kind.BAD_INPUT);
     }
 
     @Test
@@ -180,8 +196,10 @@ class GeminiServiceTest {
     void synthesizedSpeechIsWrappedAsWav() {
         GeminiService s = service("k", "m", "");
         server.expect(once(), requestTo(URL.formatted("tts-model")))
-                .andRespond(withSuccess("{\"candidates\":[{\"content\":{\"parts\":[{\"inlineData\":{\"data\":\"AAAA\"}}]}}]}",
-                        MediaType.APPLICATION_JSON));
+                .andRespond(
+                        withSuccess(
+                                "{\"candidates\":[{\"content\":{\"parts\":[{\"inlineData\":{\"data\":\"AAAA\"}}]}}]}",
+                                MediaType.APPLICATION_JSON));
         byte[] wav = s.synthesizeSpeech("hello");
         assertThat(new String(wav, 0, 4)).isEqualTo("RIFF");
         assertThat(new String(wav, 8, 4)).isEqualTo("WAVE");

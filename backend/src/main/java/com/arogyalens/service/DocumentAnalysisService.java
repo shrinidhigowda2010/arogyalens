@@ -19,21 +19,20 @@ import com.arogyalens.source.SourceService;
 import com.arogyalens.util.FileValidationUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class DocumentAnalysisService {
 
-    private static final Logger log = LoggerFactory.getLogger(DocumentAnalysisService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DocumentAnalysisService.class);
 
     private final FileValidationUtil fileValidationUtil;
     private final PrivacyService privacyService;
@@ -48,18 +47,19 @@ public class DocumentAnalysisService {
     private final ArogyaLensProperties properties;
     private final ObjectMapper objectMapper;
 
-    public DocumentAnalysisService(FileValidationUtil fileValidationUtil,
-                                   PrivacyService privacyService,
-                                   GeminiService geminiService,
-                                   SafetyValidationService safetyValidationService,
-                                   SourceService sourceService,
-                                   SessionService sessionService,
-                                   DoctorQuestionService doctorQuestionService,
-                                   LocalDocumentParser localDocumentParser,
-                                   OfflineLanguagePack offlineLanguagePack,
-                                   DemoDataService demoDataService,
-                                   ArogyaLensProperties properties,
-                                   ObjectMapper objectMapper) {
+    public DocumentAnalysisService(
+            FileValidationUtil fileValidationUtil,
+            PrivacyService privacyService,
+            GeminiService geminiService,
+            SafetyValidationService safetyValidationService,
+            SourceService sourceService,
+            SessionService sessionService,
+            DoctorQuestionService doctorQuestionService,
+            LocalDocumentParser localDocumentParser,
+            OfflineLanguagePack offlineLanguagePack,
+            DemoDataService demoDataService,
+            ArogyaLensProperties properties,
+            ObjectMapper objectMapper) {
         this.fileValidationUtil = fileValidationUtil;
         this.privacyService = privacyService;
         this.geminiService = geminiService;
@@ -74,14 +74,14 @@ public class DocumentAnalysisService {
         this.objectMapper = objectMapper;
     }
 
-    public AnalysisResponse analyze(MultipartFile file, boolean demo, String hint, String language) {
+    public AnalysisResponse analyze(
+            MultipartFile file, boolean demo, String hint, String language) {
         if (demo) {
             if (!properties.demo().enabled()) {
                 throw new ArogyaLensException(
                         "DEMO_DISABLED",
                         "Demo disabled",
-                        "Demo mode is disabled. Please upload a JPG, PNG, or PDF medical document."
-                );
+                        "Demo mode is disabled. Please upload a JPG, PNG, or PDF medical document.");
             }
             String id = sessionService.createId();
             AnalysisResponse response = demoDataService.labReport(id);
@@ -92,8 +92,7 @@ public class DocumentAnalysisService {
             throw new ArogyaLensException(
                     "EMPTY_FILE",
                     "Empty upload",
-                    "Please choose a medical document image or PDF to analyze."
-            );
+                    "Please choose a medical document image or PDF to analyze.");
         }
 
         String mimeType = fileValidationUtil.validate(file);
@@ -106,8 +105,12 @@ public class DocumentAnalysisService {
 
             if (geminiService.isAvailable()) {
                 try {
-                    String aiJson = geminiService.generateJson(
-                            PromptLibrary.documentExtractionPrompt(hint), file.getBytes(), mimeType, "document");
+                    String aiJson =
+                            geminiService.generateJson(
+                                    PromptLibrary.documentExtractionPrompt(hint),
+                                    file.getBytes(),
+                                    mimeType,
+                                    "document");
                     return fromAi(id, aiJson, lang);
                 } catch (ArogyaLensException ex) {
                     aiError = ex; // fall back to local PDF text parsing below
@@ -115,11 +118,20 @@ public class DocumentAnalysisService {
             }
 
             if (extractedText.isPresent()) {
-                List<MedicalParameter> parameters = localDocumentParser.parseLabParameters(extractedText.get());
+                List<MedicalParameter> parameters =
+                        localDocumentParser.parseLabParameters(extractedText.get());
                 if (!parameters.isEmpty()) {
-                    PrivacyService.PrivacyResult privacy = privacyService.scanAndRedact(extractedText.get());
-                    return buildResponse(id, DocumentType.LAB_REPORT, "Blood Test Report",
-                            parameters, privacy, false, lang, privacy.redactedText());
+                    PrivacyService.PrivacyResult privacy =
+                            privacyService.scanAndRedact(extractedText.get());
+                    return buildResponse(
+                            id,
+                            DocumentType.LAB_REPORT,
+                            "Blood Test Report",
+                            parameters,
+                            privacy,
+                            false,
+                            lang,
+                            privacy.redactedText());
                 }
             }
 
@@ -133,76 +145,77 @@ public class DocumentAnalysisService {
         } catch (ArogyaLensException ex) {
             throw ex;
         } catch (Exception e) {
-            log.warn("Document analysis failed: {}", e.getClass().getSimpleName());
+            LOG.warn("Document analysis failed: {}", e.getClass().getSimpleName());
             throw new ArogyaLensException(
                     "ANALYSIS_FAILED",
                     "Analysis failed",
-                    "We couldn't analyze this file. Please try another clearer JPG, PNG, or PDF."
-            );
+                    "We couldn't analyze this file. Please try another clearer JPG, PNG, or PDF.");
         }
     }
 
     private AnalysisResponse fromAi(String id, String json, String lang) throws Exception {
         JsonNode root = objectMapper.readTree(json);
-        PrivacyService.PrivacyResult summaryPrivacy = privacyService.scanAndRedact(
-                root.path("rawTextSummary").asText("")
-        );
+        PrivacyService.PrivacyResult summaryPrivacy =
+                privacyService.scanAndRedact(root.path("rawTextSummary").asText(""));
         List<MedicalParameter> parameters = parseParameters(root.path("parameters"));
         DocumentType type = parseType(root.path("documentType").asText("LAB_REPORT"));
         String label = root.path("documentLabel").asText("Medical Document");
         return buildResponse(id, type, label, parameters, summaryPrivacy, true, lang, json);
     }
 
-    private AnalysisResponse buildResponse(String id,
-                                           DocumentType type,
-                                           String label,
-                                           List<MedicalParameter> parameters,
-                                           PrivacyService.PrivacyResult privacy,
-                                           boolean aiUsed,
-                                           String lang,
-                                           String context) {
+    private AnalysisResponse buildResponse(
+            String id,
+            DocumentType type,
+            String label,
+            List<MedicalParameter> parameters,
+            PrivacyService.PrivacyResult privacy,
+            boolean aiUsed,
+            String lang,
+            String context) {
         List<String> questions = doctorQuestionService.fromJsonOrDefault(null, parameters);
         DashboardSummaryDto dashboard = summarize(parameters);
         List<String> safetyNotes = new ArrayList<>();
-        safetyNotes.add("⚠️ Important: This information may require discussion with a qualified healthcare professional.");
-        safetyNotes.add("ArogyaLens cannot diagnose your condition or determine treatment from this document alone.");
+        safetyNotes.add(
+                "⚠️ Important: This information may require discussion with a qualified healthcare professional.");
+        safetyNotes.add(
+                "ArogyaLens cannot diagnose your condition or determine treatment from this document alone.");
         if (privacy.redacted()) {
-            safetyNotes.add("Common personal identifiers were masked before processing where detected.");
+            safetyNotes.add(
+                    "Common personal identifiers were masked before processing where detected.");
         }
 
         Map<String, String> translations = offlineLanguagePack.all("hba1c");
 
-        AnalysisResponse response = new AnalysisResponse(
-                id,
-                type,
-                label,
-                false,
-                new PrivacyShieldDto(
-                        privacy.findings(),
-                        "ArogyaLens automatically detects and masks common personal identifiers before processing.",
-                        privacy.redacted()
-                ),
-                steps(),
-                1,
-                parameters.size(),
-                parameters,
-                dashboard,
-                questions,
-                sourceService.forTopic(parameters.isEmpty() ? "lab" : parameters.getFirst().name()),
-                safetyNotes,
-                null,
-                null,
-                null,
-                buildFamilySummary(dashboard, questions),
-                translations,
-                "Original document retained for verification. Files are processed temporarily and not stored permanently by default.",
-                aiUsed,
-                "We don't replace the doctor. We make healthcare easier to understand."
-        );
+        AnalysisResponse response =
+                new AnalysisResponse(
+                        id,
+                        type,
+                        label,
+                        false,
+                        new PrivacyShieldDto(
+                                privacy.findings(),
+                                "ArogyaLens automatically detects and masks common personal identifiers before processing.",
+                                privacy.redacted()),
+                        steps(),
+                        1,
+                        parameters.size(),
+                        parameters,
+                        dashboard,
+                        questions,
+                        sourceService.forTopic(
+                                parameters.isEmpty() ? "lab" : parameters.getFirst().name()),
+                        safetyNotes,
+                        null,
+                        null,
+                        null,
+                        buildFamilySummary(dashboard, questions),
+                        translations,
+                        "Original document retained for verification. Files are processed temporarily and not stored permanently by default.",
+                        aiUsed,
+                        "We don't replace the doctor. We make healthcare easier to understand.");
         sessionService.save(id, response, context == null ? buildContext(response) : context);
         return response;
     }
-
 
     private List<MedicalParameter> parseParameters(JsonNode array) {
         List<MedicalParameter> list = new ArrayList<>();
@@ -211,29 +224,33 @@ public class DocumentAnalysisService {
         }
         for (JsonNode n : array) {
             double confidence = n.path("confidence").asDouble(0.5);
-            String value = n.path("value").isNull() || n.path("value").asText().isBlank()
-                    ? "Unable to confidently read this value. Please verify the original document."
-                    : n.path("value").asText();
-            ParameterStatus status = confidence < 0.7
-                    ? ParameterStatus.LOW_CONFIDENCE
-                    : parseStatus(n.path("status").asText("UNKNOWN"));
-            String explanation = safetyValidationService.enforceSafeWording(
-                    n.path("explanation").asText("I couldn't confidently determine this from the uploaded document.")
-            );
-            String simple = safetyValidationService.enforceSafeWording(
-                    n.path("simpleExplanation").asText(explanation)
-            );
-            list.add(new MedicalParameter(
-                    n.path("name").asText("Unknown parameter"),
-                    value,
-                    n.path("unit").asText(null),
-                    n.path("referenceRange").asText(null),
-                    status,
-                    explanation,
-                    simple,
-                    confidence,
+            String value =
+                    n.path("value").isNull() || n.path("value").asText().isBlank()
+                            ? "Unable to confidently read this value. Please verify the original document."
+                            : n.path("value").asText();
+            ParameterStatus status =
                     confidence < 0.7
-            ));
+                            ? ParameterStatus.LOW_CONFIDENCE
+                            : parseStatus(n.path("status").asText("UNKNOWN"));
+            String explanation =
+                    safetyValidationService.enforceSafeWording(
+                            n.path("explanation")
+                                    .asText(
+                                            "I couldn't confidently determine this from the uploaded document."));
+            String simple =
+                    safetyValidationService.enforceSafeWording(
+                            n.path("simpleExplanation").asText(explanation));
+            list.add(
+                    new MedicalParameter(
+                            n.path("name").asText("Unknown parameter"),
+                            value,
+                            n.path("unit").asText(null),
+                            n.path("referenceRange").asText(null),
+                            status,
+                            explanation,
+                            simple,
+                            confidence,
+                            confidence < 0.7));
         }
         return list;
     }
@@ -255,12 +272,14 @@ public class DocumentAnalysisService {
     }
 
     private DashboardSummaryDto summarize(List<MedicalParameter> parameters) {
-        int within = 0, discuss = 0, important = 0;
+        int within = 0;
+        int discuss = 0;
+        int important = 0;
         for (MedicalParameter p : parameters) {
             switch (p.status()) {
                 case WITHIN_RANGE -> within++;
                 case IMPORTANT_ATTENTION -> important++;
-                case OUTSIDE_RANGE, REQUIRES_DISCUSSION, UNKNOWN, LOW_CONFIDENCE -> discuss++;
+                default -> discuss++;
             }
         }
         return new DashboardSummaryDto(parameters.size(), within, discuss, important);
@@ -274,8 +293,7 @@ public class DocumentAnalysisService {
                 new ProcessingStepDto("simplify", "Simplifying medical terminology...", "done"),
                 new ProcessingStepDto("translate", "Preparing multilingual explanation...", "done"),
                 new ProcessingStepDto("sources", "Finding trusted sources...", "done"),
-                new ProcessingStepDto("safety", "Running safety check...", "done")
-        );
+                new ProcessingStepDto("safety", "Running safety check...", "done"));
     }
 
     private String buildFamilySummary(DashboardSummaryDto dashboard, List<String> questions) {
@@ -298,9 +316,14 @@ public class DocumentAnalysisService {
         sb.append("Document type: ").append(response.documentType()).append('\n');
         if (response.parameters() != null) {
             for (MedicalParameter p : response.parameters()) {
-                sb.append(p.name()).append("=").append(p.value()).append(' ')
+                sb.append(p.name())
+                        .append("=")
+                        .append(p.value())
+                        .append(' ')
                         .append(p.unit() == null ? "" : p.unit())
-                        .append(" status=").append(p.status()).append('\n');
+                        .append(" status=")
+                        .append(p.status())
+                        .append('\n');
             }
         }
         return sb.toString();

@@ -1,10 +1,10 @@
 package com.arogyalens.safety;
 
-import com.arogyalens.dto.SafetyValidateResponse;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.arogyalens.dto.SafetyValidateResponse;
+import org.junit.jupiter.api.Test;
 
 class SafetyValidationServiceTest {
 
@@ -12,7 +12,8 @@ class SafetyValidationServiceTest {
 
     @Test
     void blocksDiagnosisClaims() {
-        SafetyValidateResponse response = service.validate("You have diabetes based on this report.");
+        SafetyValidateResponse response =
+                service.validate("You have diabetes based on this report.");
         assertFalse(response.safe());
         assertTrue(response.violations().contains("DIAGNOSIS_CLAIM"));
         assertFalse(response.sanitizedText().toLowerCase().contains("you have diabetes"));
@@ -20,14 +21,16 @@ class SafetyValidationServiceTest {
 
     @Test
     void blocksMedicationInstructions() {
-        SafetyValidateResponse response = service.validate("You should take this medicine and increase your dosage.");
+        SafetyValidateResponse response =
+                service.validate("You should take this medicine and increase your dosage.");
         assertFalse(response.safe());
         assertTrue(response.violations().contains("MEDICATION_INSTRUCTION"));
     }
 
     @Test
     void safeTextPassesUnchanged() {
-        SafetyValidateResponse response = service.validate("HbA1c reflects average blood sugar over about three months.");
+        SafetyValidateResponse response =
+                service.validate("HbA1c reflects average blood sugar over about three months.");
         assertTrue(response.safe());
         assertTrue(response.violations().isEmpty());
     }
@@ -42,7 +45,8 @@ class SafetyValidationServiceTest {
 
     @Test
     void emergencyTextAddsCareNote() {
-        SafetyValidateResponse response = service.validate("If you have chest pain, seek emergency care.");
+        SafetyValidateResponse response =
+                service.validate("If you have chest pain, seek emergency care.");
         assertTrue(response.notes().stream().anyMatch(n -> n.contains("emergency")));
     }
 }

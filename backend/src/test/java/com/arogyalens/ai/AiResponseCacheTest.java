@@ -1,22 +1,33 @@
 package com.arogyalens.ai;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.concurrent.atomic.AtomicLong;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 class AiResponseCacheTest {
 
     private final AtomicLong now = new AtomicLong(0);
-    private final Clock clock = new Clock() {
-        @Override public ZoneOffset getZone() { return ZoneOffset.UTC; }
-        @Override public Clock withZone(java.time.ZoneId zone) { return this; }
-        @Override public Instant instant() { return Instant.ofEpochMilli(now.get()); }
-    };
+    private final Clock clock =
+            new Clock() {
+                @Override
+                public ZoneOffset getZone() {
+                    return ZoneOffset.UTC;
+                }
+
+                @Override
+                public Clock withZone(java.time.ZoneId zone) {
+                    return this;
+                }
+
+                @Override
+                public Instant instant() {
+                    return Instant.ofEpochMilli(now.get());
+                }
+            };
 
     @Test
     void expiresEntriesAfterTtl() {

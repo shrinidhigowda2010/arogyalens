@@ -7,6 +7,4 @@ public record ChatResponse(
         List<String> fromDocument,
         List<String> generalInfo,
         List<String> aiExplanation,
-        List<String> safetyNotes
-) {
-}
+        List<String> safetyNotes) {}

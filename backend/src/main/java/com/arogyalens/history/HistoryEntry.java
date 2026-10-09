@@ -8,7 +8,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-
 import java.time.Instant;
 
 /** One PII-masked history item (a scan summary or a question and answer). */
@@ -17,7 +16,10 @@ import java.time.Instant;
 public class HistoryEntry {
 
     /** What produced the entry. */
-    public enum Kind { SCAN, CHAT }
+    public enum Kind {
+        SCAN,
+        CHAT
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,7 +46,13 @@ public class HistoryEntry {
 
     protected HistoryEntry() {}
 
-    public HistoryEntry(String deviceId, Kind kind, String title, String summary, String language, Instant createdAt) {
+    public HistoryEntry(
+            String deviceId,
+            Kind kind,
+            String title,
+            String summary,
+            String language,
+            Instant createdAt) {
         this.deviceId = deviceId;
         this.kind = kind;
         this.title = title;
@@ -53,11 +61,31 @@ public class HistoryEntry {
         this.createdAt = createdAt;
     }
 
-    public Long getId() { return id; }
-    public String getDeviceId() { return deviceId; }
-    public Kind getKind() { return kind; }
-    public String getTitle() { return title; }
-    public String getSummary() { return summary; }
-    public String getLanguage() { return language; }
-    public Instant getCreatedAt() { return createdAt; }
+    public Long getId() {
+        return id;
+    }
+
+    public String getDeviceId() {
+        return deviceId;
+    }
+
+    public Kind getKind() {
+        return kind;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getSummary() {
+        return summary;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
 }

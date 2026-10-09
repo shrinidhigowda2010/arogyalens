@@ -1,12 +1,12 @@
 package com.arogyalens.util;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.arogyalens.exception.ArogyaLensException;
 import com.arogyalens.support.TestProps;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class FileValidationUtilTest {
 
@@ -19,24 +19,33 @@ class FileValidationUtilTest {
 
     @Test
     void detectsTypeFromContentNotFromClaims() {
-        assertThat(util.validate(new MockMultipartFile("file", "x.bin", "application/octet-stream", PNG)))
+        assertThat(
+                        util.validate(
+                                new MockMultipartFile(
+                                        "file", "x.bin", "application/octet-stream", PNG)))
                 .isEqualTo("image/png");
-        assertThat(util.validate(new MockMultipartFile("file", "a.jpg", "image/jpeg", JPEG))).isEqualTo("image/jpeg");
-        assertThat(util.validate(new MockMultipartFile("file", "a.pdf", "application/pdf", PDF))).isEqualTo("application/pdf");
-        assertThat(util.validate(new MockMultipartFile("file", "a.webp", "image/webp", WEBP))).isEqualTo("image/webp");
+        assertThat(util.validate(new MockMultipartFile("file", "a.jpg", "image/jpeg", JPEG)))
+                .isEqualTo("image/jpeg");
+        assertThat(util.validate(new MockMultipartFile("file", "a.pdf", "application/pdf", PDF)))
+                .isEqualTo("application/pdf");
+        assertThat(util.validate(new MockMultipartFile("file", "a.webp", "image/webp", WEBP)))
+                .isEqualTo("image/webp");
     }
 
     @Test
     void rejectsSpoofedContentType() {
-        MockMultipartFile html = new MockMultipartFile("file", "evil.png", "image/png", "<html>".getBytes());
+        MockMultipartFile html =
+                new MockMultipartFile("file", "evil.png", "image/png", "<html>".getBytes());
         assertThatThrownBy(() -> util.validate(html))
                 .isInstanceOf(ArogyaLensException.class)
-                .extracting("code").isEqualTo("UNSUPPORTED_FORMAT");
+                .extracting("code")
+                .isEqualTo("UNSUPPORTED_FORMAT");
     }
 
     @Test
     void rejectsEmpty() {
-        MockMultipartFile file = new MockMultipartFile("file", "report.png", "image/png", new byte[]{});
+        MockMultipartFile file =
+                new MockMultipartFile("file", "report.png", "image/png", new byte[] {});
         assertThatThrownBy(() -> util.validate(file)).extracting("code").isEqualTo("EMPTY_FILE");
     }
 
@@ -44,7 +53,11 @@ class FileValidationUtilTest {
     void rejectsOversized() {
         byte[] big = new byte[15 * 1024 * 1024 + 1];
         System.arraycopy(PNG, 0, big, 0, PNG.length);
-        assertThatThrownBy(() -> util.validate(new MockMultipartFile("file", "a.png", "image/png", big)))
-                .extracting("code").isEqualTo("FILE_TOO_LARGE");
+        assertThatThrownBy(
+                        () ->
+                                util.validate(
+                                        new MockMultipartFile("file", "a.png", "image/png", big)))
+                .extracting("code")
+                .isEqualTo("FILE_TOO_LARGE");
     }
 }

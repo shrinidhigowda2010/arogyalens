@@ -10,6 +10,4 @@ public record PrescriptionItem(
         boolean afternoon,
         boolean night,
         boolean confident,
-        String note
-) {
-}
+        String note) {}

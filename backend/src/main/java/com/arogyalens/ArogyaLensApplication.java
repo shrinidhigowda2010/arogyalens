@@ -8,6 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 @SpringBootApplication
 @ConfigurationPropertiesScan
+@SuppressWarnings("checkstyle:HideUtilityClassConstructor") // Spring needs a proxyable class.
 public class ArogyaLensApplication {
 
     public static void main(String[] args) {

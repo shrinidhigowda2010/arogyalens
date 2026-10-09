@@ -3,8 +3,8 @@ package com.arogyalens.exception;
 import org.springframework.http.HttpStatus;
 
 /**
- * Application error carrying a stable machine-readable {@code code}, an internal
- * {@code message} (never shown to users) and a friendly {@code userMessage}.
+ * Application error carrying a stable machine-readable {@code code}, an internal {@code message}
+ * (never shown to users) and a friendly {@code userMessage}.
  */
 public class ArogyaLensException extends RuntimeException {
 

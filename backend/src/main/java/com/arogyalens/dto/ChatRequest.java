@@ -8,6 +8,4 @@ import jakarta.validation.constraints.Size;
 public record ChatRequest(
         @Size(max = 64) String sessionId,
         @NotBlank @Size(max = 1000) String message,
-        @Pattern(regexp = "^[a-z]{2}$") String language
-) {
-}
+        @Pattern(regexp = "^[a-z]{2}$") String language) {}

@@ -1,28 +1,40 @@
 package com.arogyalens.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.arogyalens.exception.ArogyaLensException;
 import com.arogyalens.privacy.PrivacyService;
 import com.arogyalens.support.TestProps;
-import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
-
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 
 class SessionServiceTest {
 
     private Instant now = Instant.parse("2026-01-01T00:00:00Z");
-    private final Clock clock = new Clock() {
-        @Override public ZoneOffset getZone() { return ZoneOffset.UTC; }
-        @Override public Clock withZone(ZoneId zone) { return this; }
-        @Override public Instant instant() { return now; }
-    };
-    private final SessionService sessions = new SessionService(TestProps.defaults(), new PrivacyService(), clock);
+    private final Clock clock =
+            new Clock() {
+                @Override
+                public ZoneOffset getZone() {
+                    return ZoneOffset.UTC;
+                }
+
+                @Override
+                public Clock withZone(ZoneId zone) {
+                    return this;
+                }
+
+                @Override
+                public Instant instant() {
+                    return now;
+                }
+            };
+    private final SessionService sessions =
+            new SessionService(TestProps.defaults(), new PrivacyService(), clock);
 
     @Test
     void blankOrNullIdsAreSafe() {
@@ -51,7 +63,8 @@ class SessionServiceTest {
     void requireThrowsNotFoundForUnknownSession() {
         assertThatThrownBy(() -> sessions.require("missing"))
                 .isInstanceOf(ArogyaLensException.class)
-                .extracting("status").isEqualTo(HttpStatus.NOT_FOUND);
+                .extracting("status")
+                .isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test

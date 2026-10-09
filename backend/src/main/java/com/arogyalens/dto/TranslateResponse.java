@@ -8,6 +8,4 @@ public record TranslateResponse(
         String translated,
         Map<String, String> allLanguages,
         String medicalTerm,
-        String simpleExplanation
-) {
-}
+        String simpleExplanation) {}

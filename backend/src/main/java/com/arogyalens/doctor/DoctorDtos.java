@@ -5,7 +5,6 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
 import java.util.List;
 
 /** Request/response records for the doctor consultation finder. */
@@ -18,7 +17,8 @@ public final class DoctorDtos {
             @NotBlank @Size(max = 500) String condition,
             @Pattern(regexp = "^[a-z]{2}$") String language) {}
 
-    public record SpecialtySuggestion(String specialty, String reason, boolean urgent, String source) {}
+    public record SpecialtySuggestion(
+            String specialty, String reason, boolean urgent, String source) {}
 
     /** Search near coordinates (from browser geolocation) or a typed city / PIN code. */
     public record SearchRequest(
@@ -29,11 +29,23 @@ public final class DoctorDtos {
             @Pattern(regexp = "^[a-z]{2}$") String language) {}
 
     /** A real place returned by Google Places API (New). Never fabricated. */
-    public record DoctorPlace(String id, String name, String address, Double rating, Integer ratingCount,
-                              String phone, Boolean openNow, String mapsUrl) {}
+    public record DoctorPlace(
+            String id,
+            String name,
+            String address,
+            Double rating,
+            Integer ratingCount,
+            String phone,
+            Boolean openNow,
+            String mapsUrl) {}
 
     public record SearchLink(String label, String url, String description) {}
 
-    public record SearchResponse(String specialty, String locationLabel, boolean placesEnabled,
-                                 List<DoctorPlace> places, List<SearchLink> links, String notice) {}
+    public record SearchResponse(
+            String specialty,
+            String locationLabel,
+            boolean placesEnabled,
+            List<DoctorPlace> places,
+            List<SearchLink> links,
+            String notice) {}
 }

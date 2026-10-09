@@ -9,6 +9,4 @@ public record MedicalParameter(
         String explanation,
         String simpleExplanation,
         double confidence,
-        boolean lowConfidence
-) {
-}
+        boolean lowConfidence) {}

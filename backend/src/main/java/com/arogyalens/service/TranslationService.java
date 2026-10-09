@@ -7,10 +7,9 @@ import com.arogyalens.dto.TranslateResponse;
 import com.arogyalens.util.LanguageUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.stereotype.Service;
-
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.springframework.stereotype.Service;
 
 @Service
 public class TranslationService {
@@ -20,10 +19,11 @@ public class TranslationService {
     private final ObjectMapper objectMapper;
     private final OfflineLanguagePack offlineLanguagePack;
 
-    public TranslationService(GeminiService geminiService,
-                              LanguageUtil languageUtil,
-                              ObjectMapper objectMapper,
-                              OfflineLanguagePack offlineLanguagePack) {
+    public TranslationService(
+            GeminiService geminiService,
+            LanguageUtil languageUtil,
+            ObjectMapper objectMapper,
+            OfflineLanguagePack offlineLanguagePack) {
         this.geminiService = geminiService;
         this.languageUtil = languageUtil;
         this.objectMapper = objectMapper;
@@ -43,8 +43,7 @@ public class TranslationService {
                     all.getOrDefault(lang, all.get("en")),
                     all,
                     request.medicalTerm(),
-                    all.get("en")
-            );
+                    all.get("en"));
         }
 
         String offline = offlineLanguagePack.translateMedicalBlurb(source, lang);
@@ -56,12 +55,15 @@ public class TranslationService {
         }
 
         if ("en".equals(lang)) {
-            return new TranslateResponse(source, lang, source, Map.of("en", source), request.medicalTerm(), source);
+            return new TranslateResponse(
+                    source, lang, source, Map.of("en", source), request.medicalTerm(), source);
         }
 
-        String translated = geminiService.generateText(PromptLibrary.translationPrompt(lang, source))
-                .map(this::readTranslated)
-                .orElse(source);
+        String translated =
+                geminiService
+                        .generateText(PromptLibrary.translationPrompt(lang, source))
+                        .map(this::readTranslated)
+                        .orElse(source);
 
         Map<String, String> all = new LinkedHashMap<>();
         all.put("en", source);

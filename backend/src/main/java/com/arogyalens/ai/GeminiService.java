@@ -4,14 +4,6 @@ import com.arogyalens.config.ArogyaLensProperties;
 import com.arogyalens.exception.ArogyaLensException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
-
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -21,23 +13,32 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.LongConsumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 /**
  * Thin client for the Google Gemini API ({@code generateContent}).
  *
  * <ul>
- *   <li>Authenticates with the {@code x-goog-api-key} header; the key is never placed in URLs or logs.</li>
+ *   <li>Authenticates with the {@code x-goog-api-key} header; the key is never placed in URLs or
+ *       logs.
  *   <li>Tries the primary model, then each fallback model, on quota (429), retired model (404),
- *       overload (5xx, retried once with backoff) or timeout.</li>
- *   <li>Maps failures to distinct user-facing errors (see {@link AiErrors}).</li>
- *   <li>Caches identical requests briefly via {@link AiResponseCache}.</li>
+ *       overload (5xx, retried once with backoff) or timeout.
+ *   <li>Maps failures to distinct user-facing errors (see {@link AiErrors}).
+ *   <li>Caches identical requests briefly via {@link AiResponseCache}.
  * </ul>
  */
 @Service
 public class GeminiService {
 
-    static final String BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent";
-    private static final Logger log = LoggerFactory.getLogger(GeminiService.class);
+    static final String BASE_URL =
+            "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent";
+    private static final Logger LOG = LoggerFactory.getLogger(GeminiService.class);
     private static final int TTS_SAMPLE_RATE = 24_000;
 
     private final ArogyaLensProperties properties;
@@ -46,10 +47,11 @@ public class GeminiService {
     private final AiResponseCache cache;
     private LongConsumer sleeper = GeminiService::sleepQuietly;
 
-    public GeminiService(ArogyaLensProperties properties,
-                         RestClient.Builder restClientBuilder,
-                         ObjectMapper objectMapper,
-                         AiResponseCache cache) {
+    public GeminiService(
+            ArogyaLensProperties properties,
+            RestClient.Builder restClientBuilder,
+            ObjectMapper objectMapper,
+            AiResponseCache cache) {
         this.properties = properties;
         this.restClient = restClientBuilder.build();
         this.objectMapper = objectMapper;
@@ -61,7 +63,9 @@ public class GeminiService {
         this.sleeper = sleeper;
     }
 
-    /** @return true when AI is enabled and a non-blank API key is configured. */
+    /**
+     * @return true when AI is enabled and a non-blank API key is configured.
+     */
     public boolean isAvailable() {
         return properties.ai().enabled() && !cleanKey(properties.ai().apiKey()).isEmpty();
     }
@@ -75,8 +79,9 @@ public class GeminiService {
             return "";
         }
         String key = raw.strip();
-        if (key.length() >= 2 && ((key.startsWith("\"") && key.endsWith("\""))
-                || (key.startsWith("'") && key.endsWith("'")))) {
+        if (key.length() >= 2
+                && ((key.startsWith("\"") && key.endsWith("\""))
+                        || (key.startsWith("'") && key.endsWith("'")))) {
             key = key.substring(1, key.length() - 1).strip();
         }
         return key;
@@ -100,9 +105,10 @@ public class GeminiService {
      */
     public String generateJson(String prompt) {
         requireAvailable();
-        Map<String, Object> body = Map.of(
-                "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
-                "generationConfig", jsonConfig());
+        Map<String, Object> body =
+                Map.of(
+                        "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
+                        "generationConfig", jsonConfig());
         return cached(AiResponseCache.key("text", prompt), body, "answer");
     }
 
@@ -115,15 +121,29 @@ public class GeminiService {
         requireAvailable();
         String data = Base64.getEncoder().encodeToString(fileBytes);
         String mime = mimeType == null || mimeType.isBlank() ? "image/jpeg" : mimeType;
-        Map<String, Object> body = Map.of(
-                "contents", List.of(Map.of("parts", List.of(
-                        Map.of("text", prompt),
-                        Map.of("inlineData", Map.of("mimeType", mime, "data", data))))),
-                "generationConfig", jsonConfig());
+        Map<String, Object> body =
+                Map.of(
+                        "contents",
+                                List.of(
+                                        Map.of(
+                                                "parts",
+                                                List.of(
+                                                        Map.of("text", prompt),
+                                                        Map.of(
+                                                                "inlineData",
+                                                                Map.of(
+                                                                        "mimeType",
+                                                                        mime,
+                                                                        "data",
+                                                                        data))))),
+                        "generationConfig", jsonConfig());
         return cached(AiResponseCache.key("file", prompt, mime, data), body, what);
     }
 
-    /** Best-effort text generation that returns empty instead of throwing (for optional enrichments). */
+    /**
+     * Best-effort text generation that returns empty instead of throwing (for optional
+     * enrichments).
+     */
     public Optional<String> generateText(String prompt) {
         if (!isAvailable()) {
             return Optional.empty();
@@ -131,23 +151,29 @@ public class GeminiService {
         try {
             return Optional.of(generateJson(prompt));
         } catch (ArogyaLensException e) {
-            log.warn("Optional Gemini text generation failed: {}", e.getCode());
+            LOG.warn("Optional Gemini text generation failed: {}", e.getCode());
             return Optional.empty();
         }
     }
 
     /**
-     * Synthesises speech with Gemini TTS and returns a WAV file (16-bit mono PCM, 24 kHz).
-     * Used only when the user's device has no voice for the selected language.
+     * Synthesises speech with Gemini TTS and returns a WAV file (16-bit mono PCM, 24 kHz). Used
+     * only when the user's device has no voice for the selected language.
      */
     public byte[] synthesizeSpeech(String text) {
         requireAvailable();
-        Map<String, Object> body = Map.of(
-                "contents", List.of(Map.of("parts", List.of(Map.of("text", text)))),
-                "generationConfig", Map.of(
-                        "responseModalities", List.of("AUDIO"),
-                        "speechConfig", Map.of("voiceConfig",
-                                Map.of("prebuiltVoiceConfig", Map.of("voiceName", "Kore")))));
+        Map<String, Object> body =
+                Map.of(
+                        "contents", List.of(Map.of("parts", List.of(Map.of("text", text)))),
+                        "generationConfig",
+                                Map.of(
+                                        "responseModalities", List.of("AUDIO"),
+                                        "speechConfig",
+                                                Map.of(
+                                                        "voiceConfig",
+                                                        Map.of(
+                                                                "prebuiltVoiceConfig",
+                                                                Map.of("voiceName", "Kore")))));
         String model = properties.ai().ttsModel() == null ? "" : properties.ai().ttsModel().strip();
         if (model.isEmpty()) {
             throw AiErrors.failure();
@@ -206,7 +232,10 @@ public class GeminiService {
                         sleeper.accept(700L);
                         continue;
                     }
-                    log.warn("Gemini model {} unavailable ({}); trying next model", model, failure.kind);
+                    LOG.warn(
+                            "Gemini model {} unavailable ({}); trying next model",
+                            model,
+                            failure.kind);
                     break;
                 }
             }
@@ -216,27 +245,32 @@ public class GeminiService {
 
     private JsonNode post(String model, Map<String, Object> body) {
         try {
-            String response = restClient.post()
-                    .uri(BASE_URL, model)
-                    .header("x-goog-api-key", cleanKey(properties.ai().apiKey()))
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(String.class);
+            String response =
+                    restClient
+                            .post()
+                            .uri(BASE_URL, model)
+                            .header("x-goog-api-key", cleanKey(properties.ai().apiKey()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(body)
+                            .retrieve()
+                            .body(String.class);
             return objectMapper.readTree(response == null ? "{}" : response);
         } catch (RestClientResponseException ex) {
             int status = ex.getStatusCode().value();
             String errorBody = redact(ex.getResponseBodyAsString()).replaceAll("\\s+", " ");
-            log.warn("Gemini HTTP {} (model={}): {}", status, model,
+            LOG.warn(
+                    "Gemini HTTP {} (model={}): {}",
+                    status,
+                    model,
                     errorBody.length() > 600 ? errorBody.substring(0, 600) + "..." : errorBody);
             throw new CallFailure(classify(status, errorBody));
         } catch (ResourceAccessException ex) {
-            log.warn("Gemini network error (model={}): {}", model, redact(ex.getMessage()));
+            LOG.warn("Gemini network error (model={}): {}", model, redact(ex.getMessage()));
             throw new CallFailure(Kind.TIMEOUT);
         } catch (CallFailure ex) {
             throw ex;
         } catch (Exception ex) {
-            log.warn("Gemini call error (model={}): {}", model, ex.getClass().getSimpleName());
+            LOG.warn("Gemini call error (model={}): {}", model, ex.getClass().getSimpleName());
             throw new CallFailure(Kind.FAILURE);
         }
     }
@@ -274,7 +308,9 @@ public class GeminiService {
             }
         }
         if (text.toString().isBlank()) {
-            log.warn("Gemini returned no text (model={}, finishReason={}, blockReason={})", model,
+            LOG.warn(
+                    "Gemini returned no text (model={}, finishReason={}, blockReason={})",
+                    model,
                     candidate.path("finishReason").asText("n/a"),
                     root.path("promptFeedback").path("blockReason").asText("n/a"));
             throw new CallFailure(Kind.EMPTY);
@@ -311,10 +347,19 @@ public class GeminiService {
     static byte[] pcmToWav(byte[] pcm, int sampleRate) {
         ByteBuffer header = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN);
         int byteRate = sampleRate * 2;
-        header.put("RIFF".getBytes()).putInt(36 + pcm.length).put("WAVE".getBytes())
-                .put("fmt ".getBytes()).putInt(16).putShort((short) 1).putShort((short) 1)
-                .putInt(sampleRate).putInt(byteRate).putShort((short) 2).putShort((short) 16)
-                .put("data".getBytes()).putInt(pcm.length);
+        header.put("RIFF".getBytes())
+                .putInt(36 + pcm.length)
+                .put("WAVE".getBytes())
+                .put("fmt ".getBytes())
+                .putInt(16)
+                .putShort((short) 1)
+                .putShort((short) 1)
+                .putInt(sampleRate)
+                .putInt(byteRate)
+                .putShort((short) 2)
+                .putShort((short) 16)
+                .put("data".getBytes())
+                .putInt(pcm.length);
         ByteArrayOutputStream out = new ByteArrayOutputStream(44 + pcm.length);
         out.writeBytes(header.array());
         out.writeBytes(pcm);
@@ -331,8 +376,14 @@ public class GeminiService {
 
     /** Failure categories for one Gemini call; {@code tryNextModel} drives model fallback. */
     enum Kind {
-        QUOTA(true), MODEL_MISSING(true), BUSY(true), TIMEOUT(true),
-        KEY_INVALID(false), BAD_INPUT(false), EMPTY(false), FAILURE(false);
+        QUOTA(true),
+        MODEL_MISSING(true),
+        BUSY(true),
+        TIMEOUT(true),
+        KEY_INVALID(false),
+        BAD_INPUT(false),
+        EMPTY(false),
+        FAILURE(false);
 
         final boolean tryNextModel;
 

@@ -9,6 +9,4 @@ public record DischargeSummary(
         List<String> medicinesListed,
         List<String> followUpInstructions,
         List<String> warningSigns,
-        List<String> doctorQuestions
-) {
-}
+        List<String> doctorQuestions) {}

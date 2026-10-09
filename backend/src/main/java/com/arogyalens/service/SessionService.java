@@ -4,10 +4,6 @@ import com.arogyalens.config.ArogyaLensProperties;
 import com.arogyalens.dto.AnalysisResponse;
 import com.arogyalens.exception.ArogyaLensException;
 import com.arogyalens.privacy.PrivacyService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Comparator;
@@ -15,11 +11,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
 
 /**
- * Short-lived, in-memory store of analysis sessions used to ground follow-up questions.
- * Context text is PII-masked before it is stored, entries expire after the configured TTL,
- * and the store is bounded so it cannot grow without limit.
+ * Short-lived, in-memory store of analysis sessions used to ground follow-up questions. Context
+ * text is PII-masked before it is stored, entries expire after the configured TTL, and the store is
+ * bounded so it cannot grow without limit.
  */
 @Service
 public class SessionService {
@@ -42,7 +41,9 @@ public class SessionService {
         this.clock = clock;
     }
 
-    /** @return a new random session identifier */
+    /**
+     * @return a new random session identifier
+     */
     public String createId() {
         return UUID.randomUUID().toString();
     }
@@ -50,22 +51,29 @@ public class SessionService {
     /** Stores a result and its grounding context (PII-masked) under the given id. */
     public void save(String sessionId, AnalysisResponse response, String contextText) {
         cleanup();
-        String masked = privacyService.scanAndRedact(contextText == null ? "" : contextText).redactedText();
+        String masked =
+                privacyService.scanAndRedact(contextText == null ? "" : contextText).redactedText();
         sessions.put(sessionId, new SessionRecord(response, masked, clock.instant()));
         evictOverflow();
     }
 
-    /** @throws ArogyaLensException SESSION_NOT_FOUND when the session is missing or expired */
+    /**
+     * @throws ArogyaLensException SESSION_NOT_FOUND when the session is missing or expired
+     */
     public AnalysisResponse require(String sessionId) {
-        return get(sessionId).orElseThrow(() -> new ArogyaLensException(
-                "SESSION_NOT_FOUND",
-                "Session missing",
-                "This session is no longer available. Please upload the document again.",
-                HttpStatus.NOT_FOUND
-        ));
+        return get(sessionId)
+                .orElseThrow(
+                        () ->
+                                new ArogyaLensException(
+                                        "SESSION_NOT_FOUND",
+                                        "Session missing",
+                                        "This session is no longer available. Please upload the document again.",
+                                        HttpStatus.NOT_FOUND));
     }
 
-    /** @return the analysis for a session id, or empty if the id is blank, unknown or expired */
+    /**
+     * @return the analysis for a session id, or empty if the id is blank, unknown or expired
+     */
     public Optional<AnalysisResponse> get(String sessionId) {
         cleanup();
         if (sessionId == null || sessionId.isBlank()) {
@@ -74,7 +82,9 @@ public class SessionService {
         return Optional.ofNullable(sessions.get(sessionId)).map(SessionRecord::response);
     }
 
-    /** @return the PII-masked grounding context for a session, or an empty string */
+    /**
+     * @return the PII-masked grounding context for a session, or an empty string
+     */
     public String context(String sessionId) {
         if (sessionId == null || sessionId.isBlank()) {
             return "";
@@ -100,5 +110,6 @@ public class SessionService {
         }
     }
 
-    private record SessionRecord(AnalysisResponse response, String contextText, Instant createdAt) {}
+    private record SessionRecord(
+            AnalysisResponse response, String contextText, Instant createdAt) {}
 }

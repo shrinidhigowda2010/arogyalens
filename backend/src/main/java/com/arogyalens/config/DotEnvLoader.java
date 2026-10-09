@@ -6,12 +6,16 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Loads KEY=VALUE pairs from a local .env into system properties
- * before Spring Boot starts, so ${GEMINI_API_KEY} resolves correctly.
+ * Loads KEY=VALUE pairs from a local .env into system properties before Spring Boot starts, so
+ * ${GEMINI_API_KEY} resolves correctly.
  */
 public final class DotEnvLoader {
+
+    private static final Logger LOG = LoggerFactory.getLogger(DotEnvLoader.class);
 
     private DotEnvLoader() {}
 
@@ -63,11 +67,14 @@ public final class DotEnvLoader {
 
         boolean gemini = hasGeminiKey();
         if (loadedFrom != null) {
-            System.out.println("ArogyaLens: loaded env from " + loadedFrom.toAbsolutePath()
-                    + " | GEMINI_API_KEY=" + (gemini ? "configured" : "missing"));
+            LOG.info(
+                    "ArogyaLens: loaded env from {} | GEMINI_API_KEY={}",
+                    loadedFrom.toAbsolutePath(),
+                    gemini ? "configured" : "missing");
         } else {
-            System.out.println("ArogyaLens: no .env file found | GEMINI_API_KEY="
-                    + (gemini ? "configured" : "missing"));
+            LOG.info(
+                    "ArogyaLens: no .env file found | GEMINI_API_KEY={}",
+                    gemini ? "configured" : "missing");
         }
     }
 
@@ -88,7 +95,6 @@ public final class DotEnvLoader {
                 cwd.resolve("../.env").normalize(),
                 userDir.resolve(".env"),
                 userDir.resolve("../.env").normalize(),
-                cwd.getParent() != null ? cwd.getParent().resolve(".env") : cwd.resolve(".env")
-        );
+                cwd.getParent() != null ? cwd.getParent().resolve(".env") : cwd.resolve(".env"));
     }
 }

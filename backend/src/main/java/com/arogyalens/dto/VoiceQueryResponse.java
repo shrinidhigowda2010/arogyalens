@@ -1,7 +1,6 @@
 package com.arogyalens.dto;
 
 import com.arogyalens.model.TrustedSource;
-
 import java.util.List;
 
 /** Answer from the ask/voice assistant, already passed through the safety layer. */
@@ -13,6 +12,4 @@ public record VoiceQueryResponse(
         List<String> safetyNotes,
         boolean fromDocument,
         List<TrustedSource> sources,
-        boolean emergency
-) {
-}
+        boolean emergency) {}

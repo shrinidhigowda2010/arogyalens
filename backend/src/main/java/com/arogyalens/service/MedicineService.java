@@ -13,11 +13,10 @@ import com.arogyalens.source.SourceService;
 import com.arogyalens.util.FileValidationUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class MedicineService {
@@ -31,14 +30,15 @@ public class MedicineService {
     private final ArogyaLensProperties properties;
     private final ObjectMapper objectMapper;
 
-    public MedicineService(FileValidationUtil fileValidationUtil,
-                           GeminiService geminiService,
-                           SafetyValidationService safetyValidationService,
-                           SourceService sourceService,
-                           SessionService sessionService,
-                           DemoDataService demoDataService,
-                           ArogyaLensProperties properties,
-                           ObjectMapper objectMapper) {
+    public MedicineService(
+            FileValidationUtil fileValidationUtil,
+            GeminiService geminiService,
+            SafetyValidationService safetyValidationService,
+            SourceService sourceService,
+            SessionService sessionService,
+            DemoDataService demoDataService,
+            ArogyaLensProperties properties,
+            ObjectMapper objectMapper) {
         this.fileValidationUtil = fileValidationUtil;
         this.geminiService = geminiService;
         this.safetyValidationService = safetyValidationService;
@@ -52,7 +52,9 @@ public class MedicineService {
     public AnalysisResponse analyze(MultipartFile file, boolean demo) {
         if (demo) {
             if (!properties.demo().enabled()) {
-                throw new ArogyaLensException("DEMO_DISABLED", "Demo disabled",
+                throw new ArogyaLensException(
+                        "DEMO_DISABLED",
+                        "Demo disabled",
                         "Demo mode is disabled. Please upload a medicine package image.");
             }
             String id = sessionService.createId();
@@ -61,7 +63,9 @@ public class MedicineService {
             return response;
         }
         if (file == null || file.isEmpty()) {
-            throw new ArogyaLensException("EMPTY_FILE", "Empty upload",
+            throw new ArogyaLensException(
+                    "EMPTY_FILE",
+                    "Empty upload",
                     "Please upload a photo of the medicine strip or package.");
         }
         String mimeType = fileValidationUtil.validate(file);
@@ -71,41 +75,66 @@ public class MedicineService {
 
         String id = sessionService.createId();
         try {
-            String ai = geminiService.generateJson(PromptLibrary.medicinePrompt(), file.getBytes(), mimeType, "medicine label");
+            String ai =
+                    geminiService.generateJson(
+                            PromptLibrary.medicinePrompt(),
+                            file.getBytes(),
+                            mimeType,
+                            "medicine label");
             JsonNode root = objectMapper.readTree(ai);
-            MedicineInfo medicine = new MedicineInfo(
-                    root.path("name").asText("Unable to confidently identify"),
-                    root.path("strength").asText(null),
-                    root.path("dosageForm").asText(null),
-                    root.path("manufacturer").asText(null),
-                    safetyValidationService.enforceSafeWording(root.path("generalUse").asText("General information unavailable.")),
-                    readList(root.path("commonSideEffects")),
-                    readList(root.path("precautions")),
-                    readListOrDefault(root.path("warnings"),
-                            List.of("Follow the prescription provided by your healthcare professional.")),
-                    root.path("confidence").asDouble(0.5),
-                    sourceService.forTopic(root.path("name").asText("medicine"))
-            );
+            MedicineInfo medicine =
+                    new MedicineInfo(
+                            root.path("name").asText("Unable to confidently identify"),
+                            root.path("strength").asText(null),
+                            root.path("dosageForm").asText(null),
+                            root.path("manufacturer").asText(null),
+                            safetyValidationService.enforceSafeWording(
+                                    root.path("generalUse")
+                                            .asText("General information unavailable.")),
+                            readList(root.path("commonSideEffects")),
+                            readList(root.path("precautions")),
+                            readListOrDefault(
+                                    root.path("warnings"),
+                                    List.of(
+                                            "Follow the prescription provided by your healthcare professional.")),
+                            root.path("confidence").asDouble(0.5),
+                            sourceService.forTopic(root.path("name").asText("medicine")));
 
             AnalysisResponse base = demoDataService.medicine(id);
-            AnalysisResponse response = new AnalysisResponse(
-                    id, base.documentType(), base.documentLabel(), false, base.privacyShield(),
-                    base.processingSteps(), 1, 0, List.of(), base.dashboard(), base.doctorQuestions(),
-                    medicine.sources(), base.safetyNotes(), medicine, null, null, base.familySummary(),
-                    java.util.Map.of(),
-                    "Original medicine image retained for verification. Files are processed temporarily.",
-                    true, base.disclaimer()
-            );
+            AnalysisResponse response =
+                    new AnalysisResponse(
+                            id,
+                            base.documentType(),
+                            base.documentLabel(),
+                            false,
+                            base.privacyShield(),
+                            base.processingSteps(),
+                            1,
+                            0,
+                            List.of(),
+                            base.dashboard(),
+                            base.doctorQuestions(),
+                            medicine.sources(),
+                            base.safetyNotes(),
+                            medicine,
+                            null,
+                            null,
+                            base.familySummary(),
+                            java.util.Map.of(),
+                            "Original medicine image retained for verification. Files are processed temporarily.",
+                            true,
+                            base.disclaimer());
             sessionService.save(id, response, ai);
             return response;
         } catch (ArogyaLensException ex) {
             throw ex;
         } catch (Exception e) {
-            throw new ArogyaLensException("ANALYSIS_FAILED", "Medicine analysis failed",
+            throw new ArogyaLensException(
+                    "ANALYSIS_FAILED",
+                    "Medicine analysis failed",
                     "We couldn't analyze this medicine image. Please try a clearer photo.");
         }
     }
-
 
     private List<String> readList(JsonNode node) {
         List<String> list = new ArrayList<>();

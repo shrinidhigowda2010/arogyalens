@@ -7,10 +7,9 @@ import com.arogyalens.model.MedicalParameter;
 import com.arogyalens.safety.SafetyValidationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.stereotype.Service;
 
 @Service
 public class DoctorQuestionService {
@@ -20,10 +19,11 @@ public class DoctorQuestionService {
     private final SafetyValidationService safetyValidationService;
     private final ObjectMapper objectMapper;
 
-    public DoctorQuestionService(SessionService sessionService,
-                                 GeminiService geminiService,
-                                 SafetyValidationService safetyValidationService,
-                                 ObjectMapper objectMapper) {
+    public DoctorQuestionService(
+            SessionService sessionService,
+            GeminiService geminiService,
+            SafetyValidationService safetyValidationService,
+            ObjectMapper objectMapper) {
         this.sessionService = sessionService;
         this.geminiService = geminiService;
         this.safetyValidationService = safetyValidationService;
@@ -36,7 +36,8 @@ public class DoctorQuestionService {
             return response.doctorQuestions();
         }
         String context = sessionService.context(sessionId);
-        return geminiService.generateText(PromptLibrary.doctorQuestionPrompt(context))
+        return geminiService
+                .generateText(PromptLibrary.doctorQuestionPrompt(context))
                 .map(this::parseQuestions)
                 .orElse(defaultQuestions());
     }
@@ -44,15 +45,25 @@ public class DoctorQuestionService {
     public List<String> fromJsonOrDefault(JsonNode node, List<MedicalParameter> parameters) {
         List<String> questions = new ArrayList<>();
         if (node != null && node.isArray()) {
-            node.forEach(n -> questions.add(safetyValidationService.enforceSafeWording(n.asText())));
+            node.forEach(
+                    n -> questions.add(safetyValidationService.enforceSafeWording(n.asText())));
         }
         if (!questions.isEmpty()) {
             return questions;
         }
-        if (parameters != null && parameters.stream().anyMatch(p ->
-                p.status() == com.arogyalens.model.ParameterStatus.OUTSIDE_RANGE
-                        || p.status() == com.arogyalens.model.ParameterStatus.REQUIRES_DISCUSSION
-                        || p.status() == com.arogyalens.model.ParameterStatus.IMPORTANT_ATTENTION)) {
+        if (parameters != null
+                && parameters.stream()
+                        .anyMatch(
+                                p ->
+                                        p.status()
+                                                        == com.arogyalens.model.ParameterStatus
+                                                                .OUTSIDE_RANGE
+                                                || p.status()
+                                                        == com.arogyalens.model.ParameterStatus
+                                                                .REQUIRES_DISCUSSION
+                                                || p.status()
+                                                        == com.arogyalens.model.ParameterStatus
+                                                                .IMPORTANT_ATTENTION)) {
             return defaultQuestions();
         }
         return defaultQuestions();
@@ -62,7 +73,8 @@ public class DoctorQuestionService {
         try {
             JsonNode root = objectMapper.readTree(json);
             List<String> list = new ArrayList<>();
-            root.path("questions").forEach(n -> list.add(safetyValidationService.enforceSafeWording(n.asText())));
+            root.path("questions")
+                    .forEach(n -> list.add(safetyValidationService.enforceSafeWording(n.asText())));
             return list.isEmpty() ? defaultQuestions() : list;
         } catch (Exception e) {
             return defaultQuestions();
@@ -75,7 +87,6 @@ public class DoctorQuestionService {
                 "Does this result need to be repeated?",
                 "Do I need any additional tests?",
                 "Could any of my current medicines affect this result?",
-                "When should I follow up?"
-        );
+                "When should I follow up?");
     }
 }

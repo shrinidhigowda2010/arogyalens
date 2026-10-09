@@ -1,11 +1,11 @@
 package com.arogyalens.util;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import com.arogyalens.exception.ArogyaLensException;
 import com.arogyalens.support.TestProps;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class LanguageUtilTest {
 

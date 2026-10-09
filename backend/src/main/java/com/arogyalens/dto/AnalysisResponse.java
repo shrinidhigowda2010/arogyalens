@@ -7,7 +7,6 @@ import com.arogyalens.model.MedicineInfo;
 import com.arogyalens.model.PiiFinding;
 import com.arogyalens.model.PrescriptionItem;
 import com.arogyalens.model.TrustedSource;
-
 import java.util.List;
 import java.util.Map;
 
@@ -32,24 +31,11 @@ public record AnalysisResponse(
         Map<String, String> translations,
         String originalPreviewNote,
         boolean aiUsed,
-        String disclaimer
-) {
-    public record PrivacyShieldDto(
-            List<PiiFinding> findings,
-            String message,
-            boolean redacted
-    ) {}
+        String disclaimer) {
+    public record PrivacyShieldDto(List<PiiFinding> findings, String message, boolean redacted) {}
 
-    public record ProcessingStepDto(
-            String id,
-            String label,
-            String status
-    ) {}
+    public record ProcessingStepDto(String id, String label, String status) {}
 
     public record DashboardSummaryDto(
-            int total,
-            int withinRange,
-            int needsDiscussion,
-            int importantAttention
-    ) {}
+            int total, int withinRange, int needsDiscussion, int importantAttention) {}
 }

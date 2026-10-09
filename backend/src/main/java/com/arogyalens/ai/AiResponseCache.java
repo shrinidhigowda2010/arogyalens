@@ -1,9 +1,6 @@
 package com.arogyalens.ai;
 
 import com.arogyalens.config.ArogyaLensProperties;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -12,11 +9,13 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /**
- * Bounded LRU cache with a time-to-live for identical AI requests.
- * Keys are SHA-256 hashes of the request, so no prompt or document content is retained as a key.
- * Saves the (very small) Gemini free-tier quota when users retry the same scan or question.
+ * Bounded LRU cache with a time-to-live for identical AI requests. Keys are SHA-256 hashes of the
+ * request, so no prompt or document content is retained as a key. Saves the (very small) Gemini
+ * free-tier quota when users retry the same scan or question.
  */
 @Component
 public class AiResponseCache {
@@ -28,19 +27,23 @@ public class AiResponseCache {
 
     @Autowired
     public AiResponseCache(ArogyaLensProperties properties) {
-        this(properties.cache().maxEntries(), properties.cache().ttlSeconds() * 1000L, Clock.systemUTC());
+        this(
+                properties.cache().maxEntries(),
+                properties.cache().ttlSeconds() * 1000L,
+                Clock.systemUTC());
     }
 
     AiResponseCache(int maxEntries, long ttlMillis, Clock clock) {
         this.maxEntries = Math.max(0, maxEntries);
         this.ttlMillis = Math.max(0, ttlMillis);
         this.clock = clock;
-        this.entries = new LinkedHashMap<>(16, 0.75f, true) {
-            @Override
-            protected boolean removeEldestEntry(Map.Entry<String, Entry> eldest) {
-                return size() > AiResponseCache.this.maxEntries;
-            }
-        };
+        this.entries =
+                new LinkedHashMap<>(16, 0.75f, true) {
+                    @Override
+                    protected boolean removeEldestEntry(Map.Entry<String, Entry> eldest) {
+                        return size() > AiResponseCache.this.maxEntries;
+                    }
+                };
     }
 
     /** Returns a stable SHA-256 hex digest of the given request parts. */

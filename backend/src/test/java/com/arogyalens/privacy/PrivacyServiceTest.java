@@ -1,8 +1,8 @@
 package com.arogyalens.privacy;
 
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
 
 class PrivacyServiceTest {
 
@@ -10,7 +10,8 @@ class PrivacyServiceTest {
 
     @Test
     void detectsAndRedactsCommonPii() {
-        String text = """
+        String text =
+                """
                 Patient Name: Anita Sharma
                 Phone: 9876543210
                 Email: anita@example.com
@@ -22,8 +23,15 @@ class PrivacyServiceTest {
         PrivacyService.PrivacyResult result = privacyService.scanAndRedact(text);
 
         assertThat(result.redacted()).isTrue();
-        assertThat(result.findings()).extracting("type")
-                .contains("Patient name", "Phone number", "Email", "Patient ID", "Date of birth", "Address");
+        assertThat(result.findings())
+                .extracting("type")
+                .contains(
+                        "Patient name",
+                        "Phone number",
+                        "Email",
+                        "Patient ID",
+                        "Date of birth",
+                        "Address");
         assertThat(result.redactedText())
                 .doesNotContain("9876543210")
                 .doesNotContain("anita@example.com")
@@ -33,13 +41,17 @@ class PrivacyServiceTest {
 
     @Test
     void masksAadhaarLikeNumbersAndInternationalPhones() {
-        PrivacyService.PrivacyResult result = privacyService.scanAndRedact("ID 1234 5678 9012, call +91 9876543210");
-        assertThat(result.redactedText()).doesNotContain("1234 5678 9012").doesNotContain("9876543210");
+        PrivacyService.PrivacyResult result =
+                privacyService.scanAndRedact("ID 1234 5678 9012, call +91 9876543210");
+        assertThat(result.redactedText())
+                .doesNotContain("1234 5678 9012")
+                .doesNotContain("9876543210");
     }
 
     @Test
     void leavesMedicalValuesUntouched() {
-        PrivacyService.PrivacyResult result = privacyService.scanAndRedact("HbA1c 7.2 % (4.0 - 5.6)");
+        PrivacyService.PrivacyResult result =
+                privacyService.scanAndRedact("HbA1c 7.2 % (4.0 - 5.6)");
         assertThat(result.redacted()).isFalse();
         assertThat(result.redactedText()).isEqualTo("HbA1c 7.2 % (4.0 - 5.6)");
     }
