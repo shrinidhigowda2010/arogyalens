@@ -183,4 +183,55 @@ class ScanFlowIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.translated").isNotEmpty());
     }
+
+    @Test
+    void recordedQuestionIsTranscribed() throws Exception {
+        when(gemini.generateJson(anyString(), any(byte[].class), eq("audio/ogg"), eq("Voice")))
+                .thenReturn("{\"text\": \" मेरा HbA1c क्या है \"}");
+        mockMvc.perform(
+                        multipart("/api/voice/transcribe")
+                                .file(
+                                        new MockMultipartFile(
+                                                "audio",
+                                                "q.ogg",
+                                                "audio/ogg;codecs=opus",
+                                                new byte[] {1, 2, 3}))
+                                .param("language", "hi"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.text").value("मेरा HbA1c क्या है"));
+    }
+
+    @Test
+    void transcriptionRejectsWrongTypeEmptyAndOversizedAudio() throws Exception {
+        mockMvc.perform(
+                        multipart("/api/voice/transcribe")
+                                .file(new MockMultipartFile("audio", "a.txt", "text/plain", PNG)))
+                .andExpect(status().isUnsupportedMediaType());
+        mockMvc.perform(
+                        multipart("/api/voice/transcribe")
+                                .file(
+                                        new MockMultipartFile(
+                                                "audio", "a.webm", "audio/webm", new byte[0])))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(
+                        multipart("/api/voice/transcribe")
+                                .file(
+                                        new MockMultipartFile(
+                                                "audio",
+                                                "a.webm",
+                                                "audio/webm",
+                                                new byte[2 * 1024 * 1024 + 1])))
+                .andExpect(status().isPayloadTooLarge());
+    }
+
+    @Test
+    void unparseableTranscriptionIsAFriendlyError() throws Exception {
+        when(gemini.generateJson(anyString(), any(byte[].class), eq("audio/webm"), eq("Voice")))
+                .thenReturn("not json");
+        mockMvc.perform(
+                        multipart("/api/voice/transcribe")
+                                .file(new MockMultipartFile("audio", "a.webm", "audio/webm", PNG))
+                                .param("language", "../x"))
+                .andExpect(status().is4xxClientError());
+    }
 }

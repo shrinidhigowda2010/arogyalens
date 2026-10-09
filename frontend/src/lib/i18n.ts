@@ -48,7 +48,7 @@ const en: Dict = {
   micStart: 'Speak your question',
   micStop: 'Stop listening',
   micListening: 'Listening… speak now',
-  micUnsupported: 'Voice input is not supported in this browser. Please type instead.',
+  micUnsupported: 'Voice input works in Chrome or Edge; you can type here instead.',
   answerHeading: 'Answer',
   thinking: 'Finding an answer…',
   listen: 'Listen',

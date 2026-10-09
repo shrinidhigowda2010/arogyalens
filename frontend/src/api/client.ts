@@ -136,6 +136,17 @@ export async function fetchSpeech(text: string, language: AppLanguage): Promise<
   return res.blob()
 }
 
+/** Transcribes a recorded question with Gemini (for browsers without speech recognition). */
+export async function transcribeAudio(audio: Blob, language: AppLanguage): Promise<string> {
+  const form = new FormData()
+  const ext = audio.type.includes('ogg') ? 'ogg' : audio.type.includes('mp4') ? 'mp4' : 'webm'
+  form.append('audio', audio, `question.${ext}`)
+  form.append('language', language)
+  const res = await fetch(url('/api/voice/transcribe'), { method: 'POST', body: form })
+  const body = await handleResponse<{ text: string }>(res)
+  return body.text
+}
+
 function deviceHeaders(): Record<string, string> {
   const id = getDeviceId()
   return id ? { 'X-Device-Id': id } : {}
