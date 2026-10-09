@@ -10,7 +10,23 @@ ArogyaLens helps people understand medical reports, prescriptions, medicine pack
 
 ## Problem
 
-Healthcare information is available, but many people cannot understand it because it is too technical, written only in English, difficult to read, or presented in a format that is not accessible to them.
+In India, a lab report, prescription or discharge summary is usually handed over in dense medical English. For hundreds of millions of people that is a real barrier to care:
+
+- **Language:** most patients think and speak in Hindi, Kannada, Tamil, Telugu, Marathi, Bengali or another regional language, not clinical English.
+- **Literacy:** many patients and caregivers have limited reading or health literacy, and some have low vision.
+- **Access:** doctors are scarce outside cities, consultations are short, and people don't know which specialist to see.
+- **Trust and safety:** generic chatbots can sound certain, invent sources or give unsafe medication advice.
+
+## How ArogyaLens addresses it
+
+| Barrier | Feature |
+|---|---|
+| Technical language | Gemini reads photos/PDFs and explains every value in plain words; "Explain like I'm 12" |
+| Language | Answers, explanations and voice in 7 Indian languages; ask in any script and get the answer in that language |
+| Literacy and vision | Read-aloud (device voice or Gemini TTS), voice questions, accessibility mode with large text |
+| Knowing what to do next | Questions to ask the doctor, family summary to share, doctor finder with the right specialist and real nearby clinics |
+| Safety | Never diagnoses or changes medicines; red-flag symptoms show 108/112; trusted sources only |
+| Privacy | Personal identifiers are masked before AI and storage; history is opt-in and deletable |
 
 ## Solution
 
