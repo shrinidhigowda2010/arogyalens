@@ -8,7 +8,11 @@ interface ChatPanelProps {
   compact?: boolean
 }
 
-type Msg = { role: 'user' | 'assistant'; text: string; meta?: ChatResponse }
+interface Msg {
+  role: 'user' | 'assistant'
+  text: string
+  meta?: ChatResponse
+}
 
 export function ChatPanel({ sessionId, compact }: ChatPanelProps) {
   const { language, accessibilityMode } = useApp()

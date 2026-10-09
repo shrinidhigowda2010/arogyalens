@@ -27,7 +27,9 @@ describe('ChatPanel', () => {
     await userEvent.click(screen.getByRole('button', { name: /send|ask/i }))
 
     expect(await screen.findByText(/HbA1c is above the usual range/)).toBeInTheDocument()
-    const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string)
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string,
+    ) as Record<string, unknown>
     expect(body).toMatchObject({ sessionId: 'session-123', message: 'What does HbA1c mean?' })
     expect(screen.getByRole('log')).toBeInTheDocument()
   })

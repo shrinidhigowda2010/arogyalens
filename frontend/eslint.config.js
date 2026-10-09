@@ -9,10 +9,24 @@ export default tseslint.config(
   { ignores: ['dist', 'coverage'] },
   {
     files: ['**/*.{ts,tsx}'],
-    extends: [js.configs.recommended, ...tseslint.configs.strict, jsxA11y.flatConfigs.strict],
+    extends: [
+      js.configs.recommended,
+      // Type-aware linting: strict (syntactic) + recommendedTypeChecked + stylisticTypeChecked.
+      // strictTypeChecked is not enabled: its no-unnecessary-condition and
+      // no-confusing-void-expression rules flag defensive checks on API data and
+      // idiomatic React handlers, and fixing them would mean risky rewrites.
+      ...tseslint.configs.strict,
+      ...tseslint.configs.recommendedTypeChecked,
+      ...tseslint.configs.stylisticTypeChecked,
+      jsxA11y.flatConfigs.strict,
+    ],
     languageOptions: {
       ecmaVersion: 2023,
       globals: globals.browser,
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     plugins: {
       'react-hooks': reactHooks,

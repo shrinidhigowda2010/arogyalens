@@ -10,9 +10,12 @@ afterEach(() => {
   window.history.pushState({}, '', '/')
 })
 
+const urlOf = (input: RequestInfo | URL): string =>
+  typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+
 function routeFetch(analyze: () => Promise<Response>) {
   return vi.fn<typeof fetch>((input) => {
-    const url = String(input)
+    const url = urlOf(input)
     if (url.endsWith('/api/health')) return Promise.resolve(jsonResponse({ aiConfigured: true }))
     if (url.endsWith('/analyze')) return analyze()
     return Promise.resolve(jsonResponse([]))
@@ -39,7 +42,7 @@ describe('upload → analysis flow', () => {
         { timeout: 4000 },
       ),
     ).toBeInTheDocument()
-    const analyzeCall = fetchMock.mock.calls.find(([u]) => String(u).endsWith('/analyze'))
+    const analyzeCall = fetchMock.mock.calls.find(([u]) => urlOf(u).endsWith('/analyze'))
     expect(analyzeCall?.[1]?.body).toBeInstanceOf(FormData)
   })
 

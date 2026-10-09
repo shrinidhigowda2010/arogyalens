@@ -14,7 +14,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('App shell', () => {
-  it('renders landmarks, a skip link and the ask bar on the home page', async () => {
+  it('renders landmarks, a skip link and the ask bar on the home page', () => {
     render(<App />)
     expect(screen.getByRole('link', { name: 'Skip to main content' })).toHaveAttribute(
       'href',

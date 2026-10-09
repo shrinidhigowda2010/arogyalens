@@ -109,7 +109,7 @@ export function DoctorFinder({ initialConcern = '' }: DoctorFinderProps) {
         <p className="mt-1 text-sm text-brand/85">{t(language, 'doctorsDesc')}</p>
       </div>
 
-      <form onSubmit={onSuggest} className="space-y-2">
+      <form onSubmit={(e) => void onSuggest(e)} className="space-y-2">
         <label htmlFor={ids.concern} className="block text-sm font-semibold text-brand">
           {t(language, 'concernLabel')}
         </label>
@@ -143,7 +143,7 @@ export function DoctorFinder({ initialConcern = '' }: DoctorFinderProps) {
         ) : null}
       </div>
 
-      <form onSubmit={onSearch} className="grid gap-3 sm:grid-cols-2">
+      <form onSubmit={(e) => void onSearch(e)} className="grid gap-3 sm:grid-cols-2">
         <div>
           <label htmlFor={ids.specialty} className="block text-sm font-semibold text-brand">
             {t(language, 'specialtyLabel')}

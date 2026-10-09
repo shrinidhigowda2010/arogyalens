@@ -35,14 +35,14 @@ export function FamilySummary({ summary }: { summary: string }) {
       <div className="mt-4 flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => act('copy')}
+          onClick={() => void act('copy')}
           className="btn rounded-lg border border-brand/20 px-4 py-2 text-sm font-semibold text-brand"
         >
           Copy
         </button>
         <button
           type="button"
-          onClick={() => act('share')}
+          onClick={() => void act('share')}
           className="btn rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white"
         >
           Share

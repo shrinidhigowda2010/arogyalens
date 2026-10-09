@@ -60,7 +60,9 @@ describe('DoctorFinder', () => {
       '_blank',
     )
     expect(screen.queryByRole('link', { name: /^Call/ })).not.toBeInTheDocument()
-    const body = JSON.parse((fetchMock.mock.calls[1] as [string, RequestInit])[1].body as string)
+    const body = JSON.parse(
+      (fetchMock.mock.calls[1] as [string, RequestInit])[1].body as string,
+    ) as Record<string, unknown>
     expect(body).toMatchObject({ specialty: 'Cardiologist', location: 'Mysuru', language: 'en' })
   })
 

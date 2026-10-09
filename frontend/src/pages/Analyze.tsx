@@ -66,7 +66,7 @@ export default function Analyze() {
     try {
       const health = await checkHealth().catch(() => null)
       const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf'
-      if (health && health.aiConfigured === false && !isPdf && mode !== 'report') {
+      if (health?.aiConfigured === false && !isPdf && mode !== 'report') {
         throw new Error(
           'Image recognition is not available on this server right now. Text-based PDF reports still work.',
         )
@@ -89,7 +89,7 @@ export default function Analyze() {
       })
       window.clearInterval(tick)
       await new Promise((r) => setTimeout(r, NAV_MS))
-      navigate('/results')
+      void navigate('/results')
     } catch (e) {
       window.clearInterval(tick)
       setPhase('upload')

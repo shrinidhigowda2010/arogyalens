@@ -49,7 +49,9 @@ describe('AskBar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Ask' }))
 
     await screen.findByText(answer.answer)
-    const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string)
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string,
+    ) as Record<string, unknown>
     expect(body.language).toBe('kn')
     expect(document.documentElement.lang).toBe('kn')
   })

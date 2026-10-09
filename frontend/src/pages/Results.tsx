@@ -27,7 +27,7 @@ export default function Results() {
 
   useEffect(() => {
     if (!analysis) {
-      navigate('/', { replace: true })
+      void navigate('/', { replace: true })
     }
   }, [analysis, navigate])
 
