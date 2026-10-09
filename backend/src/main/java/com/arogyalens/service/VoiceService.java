@@ -8,6 +8,7 @@ import com.arogyalens.dto.ChatResponse;
 import com.arogyalens.dto.VoiceQueryRequest;
 import com.arogyalens.dto.VoiceQueryResponse;
 import com.arogyalens.model.MedicalParameter;
+import com.arogyalens.model.ParameterStatus;
 import com.arogyalens.model.TrustedSource;
 import com.arogyalens.privacy.PrivacyService;
 import com.arogyalens.safety.SafetyValidationService;
@@ -19,12 +20,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 /** Ask-anything / voice assistant: grounded, multilingual, safety-checked answers. */
 @Service
 public class VoiceService {
+
+    private static final String NO_DOCUMENT_CONTEXT =
+            "(No document uploaded. Give general, non-diagnostic health information.)";
+    private static final String NO_ANSWER =
+            "I couldn't answer that right now. Please try again in a moment, "
+                    + "or upload a document so I can explain it, and discuss health questions with your healthcare professional.";
+    private static final String NOT_IN_DOCUMENT =
+            "I couldn't confidently determine this from the uploaded document. "
+                    + "Try asking about a specific test name from your report, or discuss it with your healthcare professional.";
+    private static final String HBA1C = "HbA1c";
+    private static final int MAX_CHAT_FACTS = 3;
 
     private final SessionService sessionService;
     private final AiClient aiClient;
@@ -61,51 +74,30 @@ public class VoiceService {
         AnalysisResponse analysis = sessionService.get(request.sessionId()).orElse(null);
         String context = sessionService.context(request.sessionId());
         if (context.isBlank()) {
-            context = "(No document uploaded. Give general, non-diagnostic health information.)";
+            context = NO_DOCUMENT_CONTEXT;
         }
         String maskedQuery = privacyService.scanAndRedact(request.query()).redactedText();
         boolean emergency = safetyValidationService.isEmergency(request.query());
         List<TrustedSource> sources = sourceService.forTopic(request.query());
 
-        Optional<String> ai =
-                aiClient.generateText(
-                        PromptLibrary.voiceAssistantPrompt(context, maskedQuery, language));
-
-        if (ai.isPresent()) {
-            try {
-                JsonNode root = objectMapper.readTree(ai.get());
-                String rawAnswer = root.path("answer").asText("");
-                if (!rawAnswer.isBlank()) {
-                    List<String> facts = new ArrayList<>();
-                    root.path("groundedFacts").forEach(n -> facts.add(n.asText()));
-                    var safety = safetyValidationService.validate(rawAnswer);
-                    return new VoiceQueryResponse(
-                            request.query(),
-                            safety.sanitizedText(),
-                            language,
-                            facts,
-                            safety.notes(),
-                            analysis != null && root.path("fromDocument").asBoolean(true),
-                            sources,
-                            emergency);
-                }
-            } catch (JsonProcessingException e) {
-                // malformed AI JSON: use the grounded fallback below
-            }
-        }
-
-        VoiceQueryResponse fallback = groundedFallback(request.query(), language, analysis);
-        return new VoiceQueryResponse(
-                fallback.query(),
-                fallback.answer(),
-                fallback.language(),
-                fallback.groundedFacts(),
-                fallback.safetyNotes(),
-                fallback.fromDocument(),
-                sources,
-                emergency);
+        return aiClient.generateText(
+                        PromptLibrary.voiceAssistantPrompt(context, maskedQuery, language))
+                .flatMap(
+                        json ->
+                                fromAi(
+                                        json,
+                                        request.query(),
+                                        language,
+                                        analysis,
+                                        sources,
+                                        emergency))
+                .orElseGet(
+                        () ->
+                                groundedFallback(
+                                        request.query(), language, analysis, sources, emergency));
     }
 
+    /** Chat variant of {@link #query}: adds the document's notable values to the answer. */
     public ChatResponse chat(ChatRequest request) {
         VoiceQueryResponse voice =
                 query(
@@ -115,15 +107,9 @@ public class VoiceService {
         List<String> fromDoc = new ArrayList<>();
         if (analysis != null && analysis.parameters() != null) {
             analysis.parameters().stream()
-                    .filter(p -> p.status() != com.arogyalens.model.ParameterStatus.WITHIN_RANGE)
-                    .limit(3)
-                    .forEach(
-                            p ->
-                                    fromDoc.add(
-                                            p.name()
-                                                    + ": "
-                                                    + p.value()
-                                                    + (p.unit() == null ? "" : " " + p.unit())));
+                    .filter(p -> p.status() != ParameterStatus.WITHIN_RANGE)
+                    .limit(MAX_CHAT_FACTS)
+                    .forEach(p -> fromDoc.add(describe(p, ": ")));
         }
         return new ChatResponse(
                 voice.answer(),
@@ -134,76 +120,50 @@ public class VoiceService {
                 voice.safetyNotes());
     }
 
-    private VoiceQueryResponse groundedFallback(
-            String query, String language, AnalysisResponse analysis) {
-        String q = query.toLowerCase(Locale.ROOT);
-        String answer;
-        List<String> facts = new ArrayList<>();
-
-        if (analysis == null) {
-            answer =
-                    "I couldn't answer that right now. Please try again in a moment, "
-                            + "or upload a document so I can explain it, and discuss health questions with your healthcare professional.";
-            var safety = safetyValidationService.validate(answer);
-            return new VoiceQueryResponse(
-                    query,
-                    safety.sanitizedText(),
-                    language,
-                    facts,
-                    safety.notes(),
-                    false,
-                    List.of(),
-                    false);
-        }
-
-        MedicalParameter match = null;
-        if (analysis.parameters() != null) {
-            match =
-                    analysis.parameters().stream()
-                            .filter(
-                                    p ->
-                                            q.contains(p.name().toLowerCase(Locale.ROOT))
-                                                    || (p.name().equalsIgnoreCase("HbA1c")
-                                                            && q.contains("hba1c")))
-                            .findFirst()
-                            .orElse(null);
-        }
-
-        if (match != null) {
-            facts.add(
-                    match.name()
-                            + " = "
-                            + match.value()
-                            + (match.unit() == null ? "" : " " + match.unit()));
-            answer = match.explanation();
-            if (!"en".equals(language)
-                    && analysis.translations() != null
-                    && analysis.translations().containsKey(language)
-                    && match.name().equalsIgnoreCase("HbA1c")) {
-                answer = analysis.translations().get(language);
+    private Optional<VoiceQueryResponse> fromAi(
+            String json,
+            String query,
+            String language,
+            AnalysisResponse analysis,
+            List<TrustedSource> sources,
+            boolean emergency) {
+        try {
+            JsonNode root = objectMapper.readTree(json);
+            String rawAnswer = root.path("answer").asText("");
+            if (rawAnswer.isBlank()) {
+                return Optional.empty();
             }
-        } else if (q.contains("important") || q.contains("most")) {
-            long outside =
-                    analysis.parameters() == null
-                            ? 0
-                            : analysis.parameters().stream()
-                                    .filter(
-                                            p ->
-                                                    p.status()
-                                                            != com.arogyalens.model.ParameterStatus
-                                                                    .WITHIN_RANGE)
-                                    .count();
-            answer =
-                    "I found "
-                            + outside
-                            + " results that are outside the reference ranges shown on your report. "
-                            + "I can explain each one, but these results alone do not establish a diagnosis.";
-        } else {
-            answer =
-                    "I couldn't confidently determine this from the uploaded document. "
-                            + "Try asking about a specific test name from your report, or discuss it with your healthcare professional.";
+            List<String> facts = new ArrayList<>();
+            root.path("groundedFacts").forEach(n -> facts.add(n.asText()));
+            var safety = safetyValidationService.validate(rawAnswer);
+            return Optional.of(
+                    new VoiceQueryResponse(
+                            query,
+                            safety.sanitizedText(),
+                            language,
+                            facts,
+                            safety.notes(),
+                            analysis != null && root.path("fromDocument").asBoolean(true),
+                            sources,
+                            emergency));
+        } catch (JsonProcessingException e) {
+            return Optional.empty(); // malformed AI JSON: caller uses the grounded fallback
         }
+    }
 
+    /** Answer built without AI, from the session's document when there is one. */
+    private VoiceQueryResponse groundedFallback(
+            String query,
+            String language,
+            AnalysisResponse analysis,
+            List<TrustedSource> sources,
+            boolean emergency) {
+        List<String> facts = new ArrayList<>();
+        String answer =
+                analysis == null
+                        ? NO_ANSWER
+                        : answerFromDocument(
+                                query.toLowerCase(Locale.ROOT), language, analysis, facts);
         var safety = safetyValidationService.validate(answer);
         return new VoiceQueryResponse(
                 query,
@@ -211,8 +171,47 @@ public class VoiceService {
                 language,
                 facts,
                 safety.notes(),
-                true,
-                List.of(),
-                false);
+                analysis != null,
+                sources,
+                emergency);
+    }
+
+    private String answerFromDocument(
+            String q, String language, AnalysisResponse analysis, List<String> facts) {
+        List<MedicalParameter> parameters =
+                analysis.parameters() == null ? List.of() : analysis.parameters();
+        Optional<MedicalParameter> match =
+                parameters.stream().filter(p -> mentions(q, p)).findFirst();
+        if (match.isPresent()) {
+            MedicalParameter p = match.get();
+            facts.add(describe(p, " = "));
+            Map<String, String> translations = analysis.translations();
+            boolean translatedHba1c =
+                    !"en".equals(language)
+                            && translations != null
+                            && translations.containsKey(language)
+                            && p.name().equalsIgnoreCase(HBA1C);
+            return translatedHba1c ? translations.get(language) : p.explanation();
+        }
+        if (q.contains("important") || q.contains("most")) {
+            long outside =
+                    parameters.stream()
+                            .filter(p -> p.status() != ParameterStatus.WITHIN_RANGE)
+                            .count();
+            return "I found "
+                    + outside
+                    + " results that are outside the reference ranges shown on your report. "
+                    + "I can explain each one, but these results alone do not establish a diagnosis.";
+        }
+        return NOT_IN_DOCUMENT;
+    }
+
+    private static boolean mentions(String lowerQuery, MedicalParameter p) {
+        return lowerQuery.contains(p.name().toLowerCase(Locale.ROOT))
+                || (p.name().equalsIgnoreCase(HBA1C) && lowerQuery.contains("hba1c"));
+    }
+
+    private static String describe(MedicalParameter p, String separator) {
+        return p.name() + separator + p.value() + (p.unit() == null ? "" : " " + p.unit());
     }
 }
