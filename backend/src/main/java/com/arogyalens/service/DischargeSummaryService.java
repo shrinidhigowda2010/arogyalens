@@ -13,8 +13,9 @@ import com.arogyalens.source.SourceService;
 import com.arogyalens.util.FileValidationUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,6 +29,7 @@ public class DischargeSummaryService {
     private final SourceService sourceService;
     private final SessionService sessionService;
     private final DemoDataService demoDataService;
+    private final ScanSupport scanSupport;
     private final ArogyaLensProperties properties;
     private final ObjectMapper objectMapper;
 
@@ -38,6 +40,7 @@ public class DischargeSummaryService {
             SourceService sourceService,
             SessionService sessionService,
             DemoDataService demoDataService,
+            ScanSupport scanSupport,
             ArogyaLensProperties properties,
             ObjectMapper objectMapper) {
         this.fileValidationUtil = fileValidationUtil;
@@ -46,29 +49,22 @@ public class DischargeSummaryService {
         this.sourceService = sourceService;
         this.sessionService = sessionService;
         this.demoDataService = demoDataService;
+        this.scanSupport = scanSupport;
         this.properties = properties;
         this.objectMapper = objectMapper;
     }
 
     public AnalysisResponse analyze(MultipartFile file, boolean demo) {
-        if (demo) {
-            if (!properties.demo().enabled()) {
-                throw new ArogyaLensException(
-                        "DEMO_DISABLED",
-                        "Demo disabled",
-                        "Demo mode is disabled. Please upload a discharge summary document.");
-            }
-            String id = sessionService.createId();
-            AnalysisResponse response = demoDataService.discharge(id);
-            sessionService.save(id, response, "demo discharge");
-            return response;
+        Optional<AnalysisResponse> sample =
+                scanSupport.demoIfRequested(
+                        demo,
+                        demoDataService::discharge,
+                        "demo discharge",
+                        "Please upload a discharge summary document.");
+        if (sample.isPresent()) {
+            return sample.get();
         }
-        if (file == null || file.isEmpty()) {
-            throw new ArogyaLensException(
-                    "EMPTY_FILE",
-                    "Empty upload",
-                    "Please upload a discharge summary image or PDF.");
-        }
+        scanSupport.requireFile(file, "Please upload a discharge summary image or PDF.");
         String mimeType = fileValidationUtil.validate(file);
         if (!geminiService.isAvailable()) {
             throw AiErrors.notConfigured();
@@ -83,21 +79,7 @@ public class DischargeSummaryService {
                             mimeType,
                             "discharge summary");
             JsonNode root = objectMapper.readTree(ai);
-            DischargeSummary summary =
-                    new DischargeSummary(
-                            safe(
-                                    root.path("reasonForAdmission")
-                                            .asText(
-                                                    "Unable to confidently determine from the uploaded document.")),
-                            safe(
-                                    root.path("treatmentPerformed")
-                                            .asText(
-                                                    "Unable to confidently determine from the uploaded document.")),
-                            readList(root.path("importantFindings")),
-                            readList(root.path("medicinesListed")),
-                            readList(root.path("followUpInstructions")),
-                            readList(root.path("warningSigns")),
-                            readList(root.path("doctorQuestions")));
+            DischargeSummary summary = toSummary(root);
             AnalysisResponse base = demoDataService.discharge(id);
             AnalysisResponse response =
                     new AnalysisResponse(
@@ -126,23 +108,32 @@ public class DischargeSummaryService {
             return response;
         } catch (ArogyaLensException ex) {
             throw ex;
-        } catch (Exception e) {
-            throw new ArogyaLensException(
-                    "ANALYSIS_FAILED",
-                    "Discharge analysis failed",
+        } catch (IOException e) {
+            throw ScanSupport.analysisFailed(
+                    "Discharge",
                     "We couldn't analyze this discharge document. Please try a clearer file.");
         }
     }
 
-    private String safe(String text) {
-        return safetyValidationService.enforceSafeWording(text);
+    /** Maps the model JSON to a {@link DischargeSummary} with safe wording and defaults. */
+    private DischargeSummary toSummary(JsonNode root) {
+        return new DischargeSummary(
+                safe(
+                        root.path("reasonForAdmission")
+                                .asText(
+                                        "Unable to confidently determine from the uploaded document.")),
+                safe(
+                        root.path("treatmentPerformed")
+                                .asText(
+                                        "Unable to confidently determine from the uploaded document.")),
+                scanSupport.safeList(root.path("importantFindings")),
+                scanSupport.safeList(root.path("medicinesListed")),
+                scanSupport.safeList(root.path("followUpInstructions")),
+                scanSupport.safeList(root.path("warningSigns")),
+                scanSupport.safeList(root.path("doctorQuestions")));
     }
 
-    private List<String> readList(JsonNode node) {
-        List<String> list = new ArrayList<>();
-        if (node != null && node.isArray()) {
-            node.forEach(n -> list.add(safe(n.asText())));
-        }
-        return list;
+    private String safe(String text) {
+        return safetyValidationService.enforceSafeWording(text);
     }
 }

@@ -17,8 +17,10 @@ import com.arogyalens.privacy.PrivacyService;
 import com.arogyalens.safety.SafetyValidationService;
 import com.arogyalens.source.SourceService;
 import com.arogyalens.util.FileValidationUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -48,6 +50,7 @@ public class DocumentAnalysisService {
     private final LocalDocumentParser localDocumentParser;
     private final OfflineLanguagePack offlineLanguagePack;
     private final DemoDataService demoDataService;
+    private final ScanSupport scanSupport;
     private final ArogyaLensProperties properties;
     private final ObjectMapper objectMapper;
 
@@ -62,6 +65,7 @@ public class DocumentAnalysisService {
             LocalDocumentParser localDocumentParser,
             OfflineLanguagePack offlineLanguagePack,
             DemoDataService demoDataService,
+            ScanSupport scanSupport,
             ArogyaLensProperties properties,
             ObjectMapper objectMapper) {
         this.fileValidationUtil = fileValidationUtil;
@@ -74,30 +78,23 @@ public class DocumentAnalysisService {
         this.localDocumentParser = localDocumentParser;
         this.offlineLanguagePack = offlineLanguagePack;
         this.demoDataService = demoDataService;
+        this.scanSupport = scanSupport;
         this.properties = properties;
         this.objectMapper = objectMapper;
     }
 
     public AnalysisResponse analyze(
             MultipartFile file, boolean demo, String hint, String language) {
-        if (demo) {
-            if (!properties.demo().enabled()) {
-                throw new ArogyaLensException(
-                        "DEMO_DISABLED",
-                        "Demo disabled",
-                        "Demo mode is disabled. Please upload a JPG, PNG, or PDF medical document.");
-            }
-            String id = sessionService.createId();
-            AnalysisResponse response = demoDataService.labReport(id);
-            sessionService.save(id, response, "demo");
-            return response;
+        Optional<AnalysisResponse> sample =
+                scanSupport.demoIfRequested(
+                        demo,
+                        demoDataService::labReport,
+                        "demo",
+                        "Please upload a JPG, PNG, or PDF medical document.");
+        if (sample.isPresent()) {
+            return sample.get();
         }
-        if (file == null || file.isEmpty()) {
-            throw new ArogyaLensException(
-                    "EMPTY_FILE",
-                    "Empty upload",
-                    "Please choose a medical document image or PDF to analyze.");
-        }
+        scanSupport.requireFile(file, "Please choose a medical document image or PDF to analyze.");
 
         String mimeType = fileValidationUtil.validate(file);
         String id = sessionService.createId();
@@ -148,7 +145,7 @@ public class DocumentAnalysisService {
             throw AiErrors.unreadable("document");
         } catch (ArogyaLensException ex) {
             throw ex;
-        } catch (Exception e) {
+        } catch (IOException e) {
             LOG.warn("Document analysis failed: {}", e.getClass().getSimpleName());
             throw new ArogyaLensException(
                     "ANALYSIS_FAILED",
@@ -157,7 +154,8 @@ public class DocumentAnalysisService {
         }
     }
 
-    private AnalysisResponse fromAi(String id, String json, String lang) throws Exception {
+    private AnalysisResponse fromAi(String id, String json, String lang)
+            throws JsonProcessingException {
         JsonNode root = objectMapper.readTree(json);
         PrivacyService.PrivacyResult summaryPrivacy =
                 privacyService.scanAndRedact(root.path("rawTextSummary").asText(""));

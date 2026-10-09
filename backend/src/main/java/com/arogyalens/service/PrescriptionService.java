@@ -14,6 +14,7 @@ import com.arogyalens.source.SourceService;
 import com.arogyalens.util.FileValidationUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -31,6 +32,7 @@ public class PrescriptionService {
     private final SourceService sourceService;
     private final SessionService sessionService;
     private final DemoDataService demoDataService;
+    private final ScanSupport scanSupport;
     private final LocalDocumentParser localDocumentParser;
     private final ArogyaLensProperties properties;
     private final ObjectMapper objectMapper;
@@ -43,6 +45,7 @@ public class PrescriptionService {
             SourceService sourceService,
             SessionService sessionService,
             DemoDataService demoDataService,
+            ScanSupport scanSupport,
             LocalDocumentParser localDocumentParser,
             ArogyaLensProperties properties,
             ObjectMapper objectMapper) {
@@ -53,28 +56,23 @@ public class PrescriptionService {
         this.sourceService = sourceService;
         this.sessionService = sessionService;
         this.demoDataService = demoDataService;
+        this.scanSupport = scanSupport;
         this.localDocumentParser = localDocumentParser;
         this.properties = properties;
         this.objectMapper = objectMapper;
     }
 
     public AnalysisResponse analyze(MultipartFile file, boolean demo) {
-        if (demo) {
-            if (!properties.demo().enabled()) {
-                throw new ArogyaLensException(
-                        "DEMO_DISABLED",
-                        "Demo disabled",
-                        "Demo mode is disabled. Please upload a prescription image or PDF.");
-            }
-            String id = sessionService.createId();
-            AnalysisResponse response = demoDataService.prescription(id);
-            sessionService.save(id, response, "demo prescription");
-            return response;
+        Optional<AnalysisResponse> sample =
+                scanSupport.demoIfRequested(
+                        demo,
+                        demoDataService::prescription,
+                        "demo prescription",
+                        "Please upload a prescription image or PDF.");
+        if (sample.isPresent()) {
+            return sample.get();
         }
-        if (file == null || file.isEmpty()) {
-            throw new ArogyaLensException(
-                    "EMPTY_FILE", "Empty upload", "Please upload a prescription image or PDF.");
-        }
+        scanSupport.requireFile(file, "Please upload a prescription image or PDF.");
         String mimeType = fileValidationUtil.validate(file);
         String id = sessionService.createId();
 
@@ -128,10 +126,9 @@ public class PrescriptionService {
             return wrapItems(id, items, true, ai);
         } catch (ArogyaLensException ex) {
             throw ex;
-        } catch (Exception e) {
-            throw new ArogyaLensException(
-                    "ANALYSIS_FAILED",
-                    "Prescription analysis failed",
+        } catch (IOException e) {
+            throw ScanSupport.analysisFailed(
+                    "Prescription",
                     "We couldn't analyze this prescription. Please try a clearer image or PDF.");
         }
     }
