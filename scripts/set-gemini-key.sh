@@ -46,5 +46,4 @@ print(f'Updated {path}')
 PY
 
 echo "Restart the backend for the key to take effect."
-echo "  source \"\$HOME/.local/arogyalens-env.sh\""
-echo "  cd \"$ROOT/backend\" && mvn -Dmaven.repo.local=\"$ROOT/.m2\" spring-boot:run"
+echo "  ./scripts/start-backend.sh"

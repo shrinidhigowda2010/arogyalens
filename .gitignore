@@ -25,3 +25,12 @@ logs/
 tmp/
 temp/
 uploads/
+
+# Test / coverage output
+coverage/
+frontend/coverage/
+*.bundle
+*.patch
+screenshots/
+test-results/
+playwright-report/
