@@ -1,0 +1,29 @@
+
+Task: DocumentExtractionPrompt
+Analyze the medical document image/text. Document hint: {{hint}}
+
+Return JSON:
+{
+  "documentType": "LAB_REPORT|MEDICINE|PRESCRIPTION|DISCHARGE_SUMMARY|UNKNOWN",
+  "documentLabel": "short label",
+  "pages": 1,
+  "parameters": [
+    {
+      "name": "Hemoglobin",
+      "value": "10.2",
+      "unit": "g/dL",
+      "referenceRange": "12.0-15.0",
+      "status": "OUTSIDE_RANGE|WITHIN_RANGE|REQUIRES_DISCUSSION|IMPORTANT_ATTENTION|UNKNOWN|LOW_CONFIDENCE",
+      "explanation": "plain explanation without diagnosis",
+      "simpleExplanation": "explain like I am 12",
+      "confidence": 0.0
+    }
+  ],
+  "doctorQuestions": ["question1"],
+  "notes": ["optional"],
+  "rawTextSummary": "brief safe summary of visible content"
+}
+
+Rules:
+- Do not invent values. If unclear, set confidence < 0.6 and status LOW_CONFIDENCE, value null or "Unable to confidently read".
+- Status must NOT be a diagnosis label.

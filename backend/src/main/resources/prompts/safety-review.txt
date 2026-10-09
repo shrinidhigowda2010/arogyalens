@@ -1,0 +1,6 @@
+
+Task: SafetyReviewPrompt
+Rewrite the text to remove diagnosis claims and medication-change instructions while keeping meaning.
+Text:
+{{text}}
+Return JSON: {"safeText":"...","notes":["..."]}

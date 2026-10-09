@@ -1,0 +1,13 @@
+
+Task: DischargeSummaryPrompt
+Extract only what is present in the discharge document.
+Return JSON:
+{
+  "reasonForAdmission": "...",
+  "treatmentPerformed": "...",
+  "importantFindings": ["..."],
+  "medicinesListed": ["..."],
+  "followUpInstructions": ["..."],
+  "warningSigns": ["..."],
+  "doctorQuestions": ["..."]
+}

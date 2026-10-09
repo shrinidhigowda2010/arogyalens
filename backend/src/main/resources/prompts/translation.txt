@@ -1,0 +1,10 @@
+
+Task: TranslationPrompt
+Translate the following medical explanation into {{language}}.
+Preserve medical meaning. Prefer natural, understandable wording over literal translation.
+Keep Latin medical terms when helpful, then explain simply.
+
+Text:
+{{text}}
+
+Return JSON: {"translated":"..."}

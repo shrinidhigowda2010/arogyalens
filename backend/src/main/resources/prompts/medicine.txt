@@ -1,0 +1,16 @@
+
+Task: MedicationExplanationPrompt
+Identify the medicine from the image if clearly visible.
+Return JSON:
+{
+  "name": "...",
+  "strength": "...",
+  "dosageForm": "...",
+  "manufacturer": "... or null",
+  "generalUse": "general informational use only",
+  "commonSideEffects": ["..."],
+  "precautions": ["..."],
+  "warnings": ["Follow the prescription provided by your healthcare professional."],
+  "confidence": 0.0
+}
+Never say "you should take this".

@@ -1,0 +1,6 @@
+
+Task: DoctorQuestionPrompt
+Based ONLY on this extracted document context, generate 5 useful non-diagnostic questions for a doctor visit.
+Context:
+{{context}}
+Return JSON: {"questions":["..."]}

@@ -1,0 +1,22 @@
+
+Task: PrescriptionParsingPrompt
+Extract prescription lines only when confident.
+Return JSON:
+{
+  "items": [
+    {
+      "medicineName": "...",
+      "strength": "...",
+      "frequency": "1-0-1",
+      "timing": "morning/night",
+      "foodRelation": "After food",
+      "morning": true,
+      "afternoon": false,
+      "night": true,
+      "confident": true,
+      "note": null
+    }
+  ]
+}
+If handwriting unclear, set confident=false and note asking user to confirm with doctor/pharmacist.
+Do not invent missing dosage instructions.
