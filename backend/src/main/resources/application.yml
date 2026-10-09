@@ -26,6 +26,21 @@ spring:
   mvc:
     problemdetails:
       enabled: false
+  # History store: PostgreSQL when DATABASE_URL is set (see DatabaseUrlResolver), otherwise in-memory H2.
+  datasource:
+    url: jdbc:h2:mem:arogyalens;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password: ""
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+      connection-timeout: 10000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
 
 arogyalens:
   cors:
@@ -63,6 +78,9 @@ arogyalens:
     redact-before-ai: true
   session:
     ttl-minutes: 60
+  history:
+    enabled: ${HISTORY_ENABLED:true}
+    max-entries-per-device: ${HISTORY_MAX_ENTRIES:50}
 
 management:
   endpoints:
