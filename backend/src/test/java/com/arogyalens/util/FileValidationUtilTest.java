@@ -1,35 +1,50 @@
 package com.arogyalens.util;
 
-import com.arogyalens.config.ArogyaLensProperties;
 import com.arogyalens.exception.ArogyaLensException;
+import com.arogyalens.support.TestProps;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class FileValidationUtilTest {
 
-    private final FileValidationUtil util = new FileValidationUtil(new ArogyaLensProperties(
-            new ArogyaLensProperties.Cors("http://localhost:5173"),
-            new ArogyaLensProperties.Ai("gemini", "", "gemini-2.0-flash", 60000, false),
-            new ArogyaLensProperties.Files(15, "image/jpeg,image/png,application/pdf"),
-            new ArogyaLensProperties.Languages("en,hi,kn,ta,te,mr,bn", "en"),
-            new ArogyaLensProperties.Demo(true),
-            new ArogyaLensProperties.Features(true, true, true),
-            new ArogyaLensProperties.Privacy(true),
-            new ArogyaLensProperties.Session(60)
-    ));
+    static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0};
+    static final byte[] JPEG = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 0};
+    static final byte[] PDF = {'%', 'P', 'D', 'F', '-', '1', '.', '7'};
+    static final byte[] WEBP = {'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'E', 'B', 'P'};
+
+    private final FileValidationUtil util = new FileValidationUtil(TestProps.defaults());
 
     @Test
-    void acceptsPng() {
-        MockMultipartFile file = new MockMultipartFile("file", "report.png", "image/png", new byte[]{1, 2, 3});
-        assertDoesNotThrow(() -> util.validate(file));
+    void detectsTypeFromContentNotFromClaims() {
+        assertThat(util.validate(new MockMultipartFile("file", "x.bin", "application/octet-stream", PNG)))
+                .isEqualTo("image/png");
+        assertThat(util.validate(new MockMultipartFile("file", "a.jpg", "image/jpeg", JPEG))).isEqualTo("image/jpeg");
+        assertThat(util.validate(new MockMultipartFile("file", "a.pdf", "application/pdf", PDF))).isEqualTo("application/pdf");
+        assertThat(util.validate(new MockMultipartFile("file", "a.webp", "image/webp", WEBP))).isEqualTo("image/webp");
+    }
+
+    @Test
+    void rejectsSpoofedContentType() {
+        MockMultipartFile html = new MockMultipartFile("file", "evil.png", "image/png", "<html>".getBytes());
+        assertThatThrownBy(() -> util.validate(html))
+                .isInstanceOf(ArogyaLensException.class)
+                .extracting("code").isEqualTo("UNSUPPORTED_FORMAT");
     }
 
     @Test
     void rejectsEmpty() {
         MockMultipartFile file = new MockMultipartFile("file", "report.png", "image/png", new byte[]{});
-        assertThrows(ArogyaLensException.class, () -> util.validate(file));
+        assertThatThrownBy(() -> util.validate(file)).extracting("code").isEqualTo("EMPTY_FILE");
+    }
+
+    @Test
+    void rejectsOversized() {
+        byte[] big = new byte[15 * 1024 * 1024 + 1];
+        System.arraycopy(PNG, 0, big, 0, PNG.length);
+        assertThatThrownBy(() -> util.validate(new MockMultipartFile("file", "a.png", "image/png", big)))
+                .extracting("code").isEqualTo("FILE_TOO_LARGE");
     }
 }

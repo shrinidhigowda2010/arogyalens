@@ -3,6 +3,7 @@ package com.arogyalens.controller;
 import com.arogyalens.exception.ArogyaLensException;
 import com.arogyalens.model.TrustedSource;
 import com.arogyalens.source.SourceService;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,7 +31,8 @@ public class SourceController {
         return sourceService.findById(id).orElseThrow(() -> new ArogyaLensException(
                 "SOURCE_NOT_FOUND",
                 "Source missing",
-                "We could not verify this information from a trusted source."
+                "We could not verify this information from a trusted source.",
+                HttpStatus.NOT_FOUND
         ));
     }
 }
