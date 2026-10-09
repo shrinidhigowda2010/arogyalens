@@ -1,28 +1,27 @@
 /// <reference types="vite/client" />
 
-interface SpeechRecognition extends EventTarget {
+/** Minimal typing for the (vendor-prefixed) Web Speech API recognition interface. */
+interface AppSpeechRecognitionEvent extends Event {
+  readonly results: SpeechRecognitionResultList
+}
+
+interface AppSpeechRecognition extends EventTarget {
   lang: string
   interimResults: boolean
   maxAlternatives: number
   start(): void
   stop(): void
-  onresult: ((ev: SpeechRecognitionEvent) => void) | null
-  onerror: ((ev: Event) => void) | null
+  abort(): void
+  onresult: ((ev: AppSpeechRecognitionEvent) => void) | null
+  onerror: ((ev: Event & { error?: string }) => void) | null
   onend: (() => void) | null
 }
 
-interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionResultList
-}
+type AppSpeechRecognitionConstructor = new () => AppSpeechRecognition
 
 interface Window {
-  SpeechRecognition?: typeof SpeechRecognition
-  webkitSpeechRecognition?: typeof SpeechRecognition
-}
-
-declare var SpeechRecognition: {
-  prototype: SpeechRecognition
-  new (): SpeechRecognition
+  SpeechRecognition?: AppSpeechRecognitionConstructor
+  webkitSpeechRecognition?: AppSpeechRecognitionConstructor
 }
 
 interface ImportMetaEnv {
