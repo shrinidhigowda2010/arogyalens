@@ -40,230 +40,166 @@ It explains what documents say, translates meaning carefully, reads aloud, cites
 - **Family summary** and **Accessibility mode**
 - **Real document upload** — JPG / PNG / WEBP / PDF recognition (Gemini for images; local PDF text parsing without AI)
 - **AI safety layer** — blocks diagnosis claims and medication-change instructions
+- **Ask anything bar with mic** — on every page, answers in the language you speak (7 Indian languages)
+- **Find a doctor** — suggests the right specialist and finds real nearby doctors (Google Places) or opens Google Maps / Practo / eSanjeevani; never invents doctors; 108/112 emergency banner
+- **My history (opt-in)** — PII-masked scans and questions, delete one or all
+
 
 ---
 
 ## Architecture
 
 ```mermaid
-flowchart TD
-  UI[React Frontend] -->|REST multipart/JSON| API[Spring Boot Controllers]
-  API --> Doc[DocumentAnalysisService]
-  API --> Med[MedicineService]
-  API --> Rx[PrescriptionService]
-  API --> Dis[DischargeSummaryService]
-  Doc --> Priv[PrivacyService]
-  Doc --> AI[GeminiService + PromptLibrary]
-  Doc --> Safe[SafetyValidationService]
-  Doc --> Src[SourceService]
-  Doc --> Sess[SessionService]
-  AI -->|fallback| Demo[DemoDataService]
+flowchart LR
+  subgraph Browser
+    UI[React 19 + TypeScript SPA]
+    WS[Web Speech API<br/>speech-to-text / text-to-speech]
+  end
+  UI -->|same-origin /api| F[Security filters<br/>headers · rate limit · CORS]
+  F --> C[REST controllers]
+  C --> P[PrivacyService<br/>PII masking]
+  P --> G[GeminiService<br/>model fallback · LRU+TTL cache]
+  G --> GA[(Gemini API<br/>generateContent · TTS)]
+  C --> S[SafetyValidationService]
+  C --> D[DoctorFinderService] --> PL[(Places API New)]
+  C --> H[HistoryService] --> DB[(PostgreSQL / H2<br/>Flyway)]
+  C --> LP[LocalDocumentParser<br/>PDF text without AI]
 ```
 
-### Backend package layout
+One container: Spring Boot serves the built React app (with SPA fallback) and the `/api` endpoints.
 
-```text
-com.arogyalens
- ├── controller
- ├── service
- ├── dto
- ├── model
- ├── config
- ├── ai
- ├── privacy
- ├── safety
- ├── source
- ├── demo
- ├── exception
- └── util
-```
-
----
-
-## Technology Stack
+## Technology stack
 
 | Layer | Tech |
-|-------|------|
-| Frontend | React, TypeScript, Vite, Tailwind CSS |
-| Backend | Java 21, Spring Boot 3.3 |
-| AI | Google Gemini (optional; demo works offline) |
-| Privacy / Safety | Custom Java services |
+|---|---|
+| Frontend | React 19, TypeScript (strict), Vite, Tailwind CSS 4, React Router (lazy routes) |
+| Backend | Java 21, Spring Boot 3.3 (Web, Validation, Data JPA, Actuator), PDFBox |
+| AI | Google Gemini (`gemini-flash-latest` + fallback chain), Gemini TTS |
+| Data | PostgreSQL via `DATABASE_URL` (TLS) or in-memory H2; Flyway migrations |
+| Quality | JUnit 5, MockMvc, MockRestServiceServer, JaCoCo, Spotless, Checkstyle · Vitest, Testing Library, axe, ESLint (jsx-a11y), Prettier |
+| Delivery | Docker (non-root), Render blueprint, GitHub Actions CI, CodeQL, Dependabot |
 
----
+## Google services
+
+| Service | How ArogyaLens uses it |
+|---|---|
+| **Gemini API** (`generateContent`) | Reads report/medicine/prescription/discharge photos and PDFs, explains them in plain language, answers questions in 7 languages, suggests the right specialist. Falls back across models on 429/404/5xx/timeouts. |
+| **Gemini TTS** (`gemini-2.5-flash-preview-tts`) | Reads answers aloud when the device has no voice for the chosen language. |
+| **Places API (New)** `places:searchText` | Real nearby doctors and clinics (name, rating, phone, open now) when `GOOGLE_MAPS_API_KEY` is set. |
+| **Google Maps URLs** | Deep links for directions and searches when no Maps key is configured. |
+| **Web Speech API** (Chrome) | Voice input and speech output in Indian locales. |
+| **Google Fonts — Noto** | Correct rendering of Devanagari, Kannada, Tamil, Telugu and Bengali scripts. |
+
+## Project structure
+
+```text
+.
+├── backend/                     Spring Boot API (serves the built frontend in production)
+│   ├── src/main/java/com/arogyalens/
+│   │   ├── ai/                  GeminiService, PromptLibrary, AiResponseCache, AiErrors
+│   │   ├── config/              Typed properties, WebConfig (CORS, SPA fallback), DATABASE_URL resolver
+│   │   ├── controller/          REST controllers (scan, voice/chat/TTS, translate, safety, health)
+│   │   ├── doctor/              Specialty suggestion + Places doctor finder
+│   │   ├── history/             Opt-in PII-masked history (JPA)
+│   │   ├── privacy/ safety/     PII masking and medical safety rules
+│   │   ├── security/            Security headers + per-IP rate limiting filters
+│   │   ├── service/             Document, medicine, prescription, discharge, session, voice services
+│   │   ├── dto/ model/          Records for requests/responses and domain types
+│   │   └── exception/           Single GlobalExceptionHandler with stable error codes
+│   └── src/main/resources/db/migration/   Flyway SQL
+├── frontend/                    React SPA
+│   └── src/{api,components,context,hooks,lib,pages,types,test}
+├── .github/                     CI, CodeQL, Dependabot
+├── Dockerfile                   Multi-stage build → single runtime container
+├── render.yaml                  Render blueprint
+└── .env.example                 Every configuration variable (no secrets)
+```
 
 ## Setup
 
-### Prerequisites
-
-- Node.js 20+
-- Java 21
-- Maven 3.9+
-
-### Environment Variables
-
-Copy `.env.example` to `.env` in the project root (and/or export variables):
-
-| Variable | Description |
-|----------|-------------|
-| `GEMINI_API_KEY` | Google Gemini API key (**required for image recognition**) |
-| `GEMINI_MODEL` | Default `gemini-2.0-flash` |
-| `AI_ENABLED` | `true` / `false` |
-| `SERVER_PORT` | Backend port (default `8088`) |
-| `VITE_API_URL` | Backend URL; leave empty to use Vite proxy |
-
-**Never commit real API keys.**
-
----
-
-## Running Locally
-
-### Backend
+Prerequisites: Java 21, Maven 3.9+, Node.js 20.19+.
 
 ```bash
-cd backend
-# Copy root .env.example → .env and set:
-export GEMINI_API_KEY=your_key_here   # required for photos/images
-mvn -Dmaven.repo.local=../.m2 spring-boot:run
+cp .env.example .env            # add GEMINI_API_KEY (and optional keys); .env is git-ignored
+./scripts/start-backend.sh      # http://localhost:8088
+./scripts/start-frontend.sh     # http://localhost:5173 (proxies /api)
 ```
 
-API: `http://localhost:8088` (override with `SERVER_PORT`)
+Text-based PDF lab reports work without Gemini; photos need `GEMINI_API_KEY`.
 
-### Frontend
+### Environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `GEMINI_API_KEY` | — | Gemini key (required for photo scans and AI answers) |
+| `GEMINI_MODEL` | `gemini-flash-latest` | Primary model |
+| `GEMINI_FALLBACK_MODELS` | `gemini-flash-latest,gemini-flash-lite-latest,…` | Tried in order on 429/404/5xx/timeout |
+| `GEMINI_TTS_MODEL` | `gemini-2.5-flash-preview-tts` | Cloud read-aloud fallback |
+| `AI_ENABLED` / `AI_TIMEOUT_MS` | `true` / `45000` | Toggle AI, request timeout |
+| `AI_CACHE_MAX_ENTRIES` / `AI_CACHE_TTL_SECONDS` | `200` / `900` | Identical-request cache |
+| `GOOGLE_MAPS_API_KEY` | — | Enables live doctor listings (Places API New) |
+| `DATABASE_URL` / `DATABASE_SSLMODE` | — / `require` | PostgreSQL for history (else in-memory H2) |
+| `HISTORY_ENABLED` / `HISTORY_MAX_ENTRIES` | `true` / `50` | History feature and per-device cap |
+| `ALLOWED_ORIGINS` | localhost dev origins | Extra CORS origins |
+| `RATE_LIMIT_PER_MINUTE` | `20` | Per-IP budget for AI endpoints |
+| `DEMO_ENABLED` | `false` | Sample documents without uploads |
+| `PORT` / `SERVER_PORT` | `8088` | HTTP port (`PORT` is injected by Render/Cloud Run) |
+| `VITE_API_URL` | empty | Frontend build: API base URL (empty = same origin) |
+
+## Testing
 
 ```bash
-cd frontend
-npm install
-npm run dev
+cd backend  && mvn verify                 # tests + JaCoCo gate + Spotless + Checkstyle
+cd frontend && npm run lint && npm run typecheck && npm run format:check \
+            && npm run test:coverage && npm run build
 ```
 
-App: `http://localhost:5173`
+- **Backend:** unit tests for Gemini (fallback chain, timeouts, error mapping, cache), sessions, voice, safety, PII masking, upload sniffing, rate limiting, doctor finder, `DATABASE_URL` parsing; MockMvc API tests including edge cases (empty/oversized/unsupported input, 404/405, AI off) and the history flow on H2. All HTTP to Google is mocked.
+- **Frontend:** Vitest + Testing Library + axe for the ask bar, doctor finder, upload, history, every route and every results type (fixtures captured from the backend's demo mode); coverage thresholds enforced.
+- CI (`.github/workflows/ci.yml`) runs both suites and a Docker build on every push and pull request.
 
-### Upload flow
+## Deployment
 
-1. Choose language in the header
-2. Open **Scan a report** (or Medicine / Prescription / Discharge)
-3. Upload a JPG/PNG/WEBP/PDF and click **Analyze document**
-4. Review Privacy Shield → structured results → switch language → Listen
+**Render:** create a Web Service from this repo (Docker runtime) or use `render.yaml`. Set `GEMINI_API_KEY` and `GEMINI_MODEL=gemini-flash-latest`; optionally `GOOGLE_MAPS_API_KEY` and `DATABASE_URL`. Health check: `/api/health`.
 
-**Note:** Text-based lab PDFs work without Gemini. Photos of reports/medicines need `GEMINI_API_KEY` in `.env`, then restart the backend.
-
-### Tests
-
+**Cloud Run:**
 ```bash
-cd backend
-mvn test
+gcloud run deploy arogyalens --source . --region asia-south1 --allow-unauthenticated \
+  --set-env-vars GEMINI_MODEL=gemini-flash-latest --set-secrets GEMINI_API_KEY=gemini-key:latest
 ```
 
----
+## Security
 
-## Privacy
+See [SECURITY.md](SECURITY.md). Highlights: PII masking before AI and before storage, magic-byte upload validation and size limits, length-limited validated inputs, per-IP rate limiting, CSP and other security headers, env-driven CORS, no stack traces in responses, keys only in headers, non-root container, CodeQL and Dependabot.
 
-- Minimal collection; sessions are in-memory and expire
-- Common PII patterns are masked before AI processing where detected
-- Uploaded files are processed temporarily and **not stored permanently by default**
-- Medical document contents are not written to application logs
-- We do **not** claim “your data can never be stored”
+## Accessibility
 
-Wording used in product:
+Skip link and landmarks, labelled controls, visible focus, keyboard-operable accordions, `lang` follows the chosen language, live regions for AI answers, reduced-motion support, WCAG AA contrast, large-text accessibility mode, read-aloud in 7 languages, and axe checks in the test suite.
 
-> ArogyaLens automatically detects and masks common personal identifiers before processing.
+## Privacy and safety
 
----
+- PII (names, phone numbers, emails, ID numbers) is masked before AI processing, in sessions and in history. Sessions are in memory and expire; uploads are not stored.
+- History is opt-in, keyed by an anonymous device id, and deletable.
+- `SafetyValidationService` blocks diagnosis claims and medication start/stop/dose instructions, and red-flag symptoms surface the 108/112 emergency banner.
 
-## Safety
+## API
 
-`SafetyValidationService` reviews outbound text to reduce:
-
-- Unsupported diagnosis claims (“You have diabetes”)
-- Medication start/stop/dose-change instructions
-
-Sensitive findings surface:
-
-> ⚠️ Important — ArogyaLens cannot diagnose your condition or determine treatment from this document alone.
-
----
+```text
+GET    /api/health
+POST   /api/documents/analyze | /api/medicines/analyze | /api/prescriptions/analyze | /api/discharge/analyze
+POST   /api/voice/query   POST /api/chat   POST /api/voice/tts
+POST   /api/translate     POST /api/doctor-questions   POST /api/safety/validate
+POST   /api/doctors/specialty   POST /api/doctors/search
+GET    /api/sources   GET /api/sources/{id}
+GET    /api/history   DELETE /api/history   DELETE /api/history/{id}   (X-Device-Id header)
+```
 
 ## Limitations
 
-- Prototype for hackathon / early product validation
-- PII detection covers common patterns, not every identifier
-- Without `GEMINI_API_KEY`, image uploads cannot be recognized (text PDFs still work)
-- Browser speech recognition/TTS quality depends on the device and OS voices
-- Not a medical device; not for emergencies or clinical decision-making
-
----
-
-## Future Roadmap
-
-- On-device OCR + redaction pipeline for stronger privacy
-- Clinician-verified explanation templates per lab panel
-- Caregiver / family shared sessions with consent
-- Offline-first language packs for rural connectivity
-- Hospital EHR integration with explicit patient authorization
-
----
-
-## API Overview
-
-```text
-POST /api/documents/analyze
-POST /api/medicines/analyze
-POST /api/prescriptions/analyze
-POST /api/discharge/analyze
-POST /api/translate
-POST /api/voice/query
-POST /api/chat
-POST /api/doctor-questions
-POST /api/safety/validate
-GET  /api/sources/{id}
-GET  /api/health
-```
-
----
+- Not a medical device; not for emergencies or clinical decisions.
+- PII detection covers common patterns, not every identifier.
+- Browser speech quality depends on the device's installed voices.
 
 ## License
 
-Built for PromptWars — AI for Healthcare Accessibility.
-
----
-
-## H2S submission notes
-
-### Architecture
-```mermaid
-flowchart LR
-  U[Browser: React + Web Speech API] -->|/api same origin| S[Spring Boot 3 / Java 21]
-  S -->|PII-masked prompts| G[Gemini API: generateContent + TTS]
-  S -->|optional| P[Google Places API New]
-  S -->|optional| DB[(PostgreSQL / H2)]
-  S --> F[Static React build + SPA fallback]
-```
-
-### Google services
-| Service | Use |
-|---|---|
-| Gemini (`gemini-flash-latest` + fallback chain) | Report/medicine/prescription/discharge understanding, multilingual Q&A, specialty suggestion |
-| Gemini TTS (`gemini-2.5-flash-preview-tts`) | Read-aloud fallback when the device has no voice for the language |
-| Places API (New) `places:searchText` | Real nearby doctors when `GOOGLE_MAPS_API_KEY` is set; otherwise Google Maps / Practo / eSanjeevani deep links (never fake doctors) |
-| Web Speech API (Chrome) | Voice input and speech output in 7 Indian languages |
-| Google Fonts (Noto Sans + Indic) | Readable scripts for all supported languages |
-
-### Testing
-- Backend: `cd backend && mvn test` — JUnit 5 + MockMvc + MockRestServiceServer (Gemini fallback/timeout/errors, cache, sessions, voice, safety, PII, uploads, rate limit, doctor finder, history, API integration). No real API calls.
-- Frontend: `cd frontend && npm run lint && npm run typecheck && npm test` — Vitest + React Testing Library + axe.
-- CI: `.github/workflows/ci.yml` runs both plus the Docker build.
-
-### Security
-See [SECURITY.md](SECURITY.md): PII masking before AI and storage, magic-byte upload checks, per-IP rate limit, security headers, env-based CORS, no stack traces, non-root container.
-
-### Accessibility
-Skip link, semantic landmarks, labelled controls, visible focus, keyboard-operable accordions, `lang` follows the selected language, live regions for AI answers, reduced-motion support, AA contrast, emergency 108/112 banner, axe checks in tests.
-
-### Efficiency
-LRU + TTL cache for identical AI requests, rules-first specialty mapping, client-side image downscaling, lazy routes, gzip, long-cache hashed assets.
-
-### Environment variables (new)
-`GEMINI_MODEL` (default `gemini-flash-latest`), `GEMINI_FALLBACK_MODELS`, `GEMINI_TTS_MODEL`, `AI_TIMEOUT_MS`, `GOOGLE_MAPS_API_KEY`, `ALLOWED_ORIGINS`, `RATE_LIMIT_PER_MINUTE`, `DATABASE_URL`, `DATABASE_SSLMODE`, `HISTORY_ENABLED`. See `.env.example`.
-
-### API
-`GET /api/health` · `POST /api/documents|medicines|prescriptions|discharge/analyze` · `POST /api/voice/query` · `POST /api/chat` · `POST /api/voice/tts` · `POST /api/doctors/specialty` · `POST /api/doctors/search` · `GET/DELETE /api/history[/{id}]` · `POST /api/translate` · `POST /api/safety/validate`
+[MIT](LICENSE). Built for PromptWars × H2S — AI for Healthcare Accessibility.
