@@ -1,0 +1,94 @@
+{
+  "sessionId": "0091c472-ebfb-4bf7-b14b-537feac00db8",
+  "documentType": "PRESCRIPTION",
+  "documentLabel": "Prescription",
+  "demo": true,
+  "privacyShield": {
+    "findings": [
+      { "type": "Patient name", "maskedValue": "An****ma", "redacted": true },
+      { "type": "Phone number", "maskedValue": "98****10", "redacted": true },
+      { "type": "Email", "maskedValue": "an****om", "redacted": true },
+      { "type": "Address", "maskedValue": "42****ru", "redacted": true },
+      { "type": "Patient ID", "maskedValue": "UH****51", "redacted": true },
+      { "type": "Date of birth", "maskedValue": "12****88", "redacted": true }
+    ],
+    "message": "ArogyaLens automatically detects and masks common personal identifiers before processing.",
+    "redacted": true
+  },
+  "processingSteps": [
+    { "id": "privacy", "label": "Protecting personal information...", "status": "done" },
+    { "id": "understand", "label": "Understanding document...", "status": "done" },
+    { "id": "extract", "label": "Extracting medical information...", "status": "done" },
+    { "id": "simplify", "label": "Simplifying medical terminology...", "status": "done" },
+    { "id": "translate", "label": "Preparing multilingual explanation...", "status": "done" },
+    { "id": "sources", "label": "Finding trusted sources...", "status": "done" },
+    { "id": "safety", "label": "Running safety check...", "status": "done" }
+  ],
+  "pages": 1,
+  "parametersDetected": 0,
+  "parameters": [],
+  "dashboard": { "total": 0, "withinRange": 0, "needsDiscussion": 0, "importantAttention": 0 },
+  "doctorQuestions": [
+    "Can you confirm the medicines and timing written on this prescription?",
+    "Should any of these medicines be taken with food as shown?",
+    "How long should I continue these medicines?",
+    "What side effects should I report?",
+    "When should I return for review?"
+  ],
+  "sources": [
+    {
+      "id": "ipc",
+      "name": "Indian Pharmacopoeia Commission",
+      "title": "Official medicine information",
+      "description": "Authoritative pharmaceutical standards and medicine information in India.",
+      "url": "https://www.ipc.gov.in/",
+      "category": "GENERAL_HEALTH_INFORMATION"
+    },
+    {
+      "id": "cdsco",
+      "name": "Central Drugs Standard Control Organization",
+      "title": "Drug regulatory information",
+      "description": "Official Indian drug regulatory authority resources.",
+      "url": "https://cdsco.gov.in/",
+      "category": "GENERAL_HEALTH_INFORMATION"
+    }
+  ],
+  "safetyNotes": ["Do not invent or change dosage instructions.", "DEMO DATA — NOT A REAL PATIENT"],
+  "prescriptionItems": [
+    {
+      "medicineName": "Metformin",
+      "strength": "500 mg",
+      "frequency": "1-0-1",
+      "timing": "Morning and Night",
+      "foodRelation": "After food",
+      "morning": true,
+      "afternoon": false,
+      "night": true,
+      "confident": true
+    },
+    {
+      "medicineName": "Atorvastatin",
+      "strength": "10 mg",
+      "frequency": "0-0-1",
+      "timing": "Night",
+      "foodRelation": "After food",
+      "morning": false,
+      "afternoon": false,
+      "night": true,
+      "confident": true
+    },
+    {
+      "medicineName": "Unclear medicine line",
+      "morning": false,
+      "afternoon": false,
+      "night": false,
+      "confident": false,
+      "note": "⚠️ We could not confidently read this instruction. Please confirm it with your doctor or pharmacist."
+    }
+  ],
+  "familySummary": "FAMILY SUMMARY\n\nThis prescription appears to list medicines with morning and night timing for at least one medicine.\nPlease verify every instruction against the original prescription with a doctor or pharmacist.\n\nDEMO DATA — NOT A REAL PATIENT",
+  "translations": {},
+  "originalPreviewNote": "Original prescription retained for side-by-side verification.",
+  "aiUsed": false,
+  "disclaimer": "We don't replace the doctor. We make healthcare easier to understand."
+}

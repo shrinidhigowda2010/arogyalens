@@ -133,7 +133,9 @@ export default function Results() {
           </section>
         ) : null}
 
-        <DoctorQuestions questions={analysis.doctorQuestions} />
+        {analysis.dischargeSummary ? null : (
+          <DoctorQuestions questions={analysis.doctorQuestions} />
+        )}
         <WhySeeingThis />
         <FamilySummary summary={analysis.familySummary} />
 
