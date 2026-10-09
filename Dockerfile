@@ -20,10 +20,14 @@ RUN mvn -q -B -DskipTests package && cp target/*.jar /app/app.jar
 # ---- Runtime ----
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=api /app/app.jar ./app.jar
+# Run as an unprivileged user.
+RUN useradd --system --uid 10001 --no-create-home arogya
+COPY --from=api --chown=arogya /app/app.jar ./app.jar
+USER arogya
 ENV AI_ENABLED=true \
-    GEMINI_MODEL=gemini-3-flash-preview \
+    GEMINI_MODEL=gemini-flash-latest \
     DEMO_ENABLED=false \
     JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75"
-# Cloud Run provides $PORT (defaults to 8080)
+EXPOSE 8080
+# Render and Cloud Run inject $PORT (defaults to 8080). Secrets come from the platform's env vars.
 CMD ["sh", "-c", "java -Dserver.port=${PORT:-8080} -jar /app/app.jar"]

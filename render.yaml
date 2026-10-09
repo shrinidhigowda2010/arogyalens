@@ -1,0 +1,30 @@
+# Render Blueprint: one Docker web service (Spring Boot serving the React build)
+# plus an optional free PostgreSQL for "My history".
+services:
+  - type: web
+    name: arogyalens
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: false
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-flash-latest
+      - key: GEMINI_FALLBACK_MODELS
+        value: gemini-flash-latest,gemini-flash-lite-latest
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "20"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: arogyalens-db
+          property: connectionString
+
+databases:
+  - name: arogyalens-db
+    plan: free
+    ipAllowList: []

@@ -34,7 +34,7 @@ if not found:
 # ensure defaults
 text = '\n'.join(out) + '\n'
 for required in [
-    ('GEMINI_MODEL=', 'GEMINI_MODEL=gemini-2.0-flash'),
+    ('GEMINI_MODEL=', 'GEMINI_MODEL=gemini-flash-latest'),
     ('AI_ENABLED=', 'AI_ENABLED=true'),
     ('SERVER_PORT=', 'SERVER_PORT=8088'),
     ('DEMO_ENABLED=', 'DEMO_ENABLED=false'),

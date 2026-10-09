@@ -224,3 +224,46 @@ GET  /api/health
 ## License
 
 Built for PromptWars — AI for Healthcare Accessibility.
+
+---
+
+## H2S submission notes
+
+### Architecture
+```mermaid
+flowchart LR
+  U[Browser: React + Web Speech API] -->|/api same origin| S[Spring Boot 3 / Java 21]
+  S -->|PII-masked prompts| G[Gemini API: generateContent + TTS]
+  S -->|optional| P[Google Places API New]
+  S -->|optional| DB[(PostgreSQL / H2)]
+  S --> F[Static React build + SPA fallback]
+```
+
+### Google services
+| Service | Use |
+|---|---|
+| Gemini (`gemini-flash-latest` + fallback chain) | Report/medicine/prescription/discharge understanding, multilingual Q&A, specialty suggestion |
+| Gemini TTS (`gemini-2.5-flash-preview-tts`) | Read-aloud fallback when the device has no voice for the language |
+| Places API (New) `places:searchText` | Real nearby doctors when `GOOGLE_MAPS_API_KEY` is set; otherwise Google Maps / Practo / eSanjeevani deep links (never fake doctors) |
+| Web Speech API (Chrome) | Voice input and speech output in 7 Indian languages |
+| Google Fonts (Noto Sans + Indic) | Readable scripts for all supported languages |
+
+### Testing
+- Backend: `cd backend && mvn test` — JUnit 5 + MockMvc + MockRestServiceServer (Gemini fallback/timeout/errors, cache, sessions, voice, safety, PII, uploads, rate limit, doctor finder, history, API integration). No real API calls.
+- Frontend: `cd frontend && npm run lint && npm run typecheck && npm test` — Vitest + React Testing Library + axe.
+- CI: `.github/workflows/ci.yml` runs both plus the Docker build.
+
+### Security
+See [SECURITY.md](SECURITY.md): PII masking before AI and storage, magic-byte upload checks, per-IP rate limit, security headers, env-based CORS, no stack traces, non-root container.
+
+### Accessibility
+Skip link, semantic landmarks, labelled controls, visible focus, keyboard-operable accordions, `lang` follows the selected language, live regions for AI answers, reduced-motion support, AA contrast, emergency 108/112 banner, axe checks in tests.
+
+### Efficiency
+LRU + TTL cache for identical AI requests, rules-first specialty mapping, client-side image downscaling, lazy routes, gzip, long-cache hashed assets.
+
+### Environment variables (new)
+`GEMINI_MODEL` (default `gemini-flash-latest`), `GEMINI_FALLBACK_MODELS`, `GEMINI_TTS_MODEL`, `AI_TIMEOUT_MS`, `GOOGLE_MAPS_API_KEY`, `ALLOWED_ORIGINS`, `RATE_LIMIT_PER_MINUTE`, `DATABASE_URL`, `DATABASE_SSLMODE`, `HISTORY_ENABLED`. See `.env.example`.
+
+### API
+`GET /api/health` · `POST /api/documents|medicines|prescriptions|discharge/analyze` · `POST /api/voice/query` · `POST /api/chat` · `POST /api/voice/tts` · `POST /api/doctors/specialty` · `POST /api/doctors/search` · `GET/DELETE /api/history[/{id}]` · `POST /api/translate` · `POST /api/safety/validate`
