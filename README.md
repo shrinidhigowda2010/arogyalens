@@ -112,7 +112,7 @@ One container: Spring Boot serves the built React app (with SPA fallback) and th
 .
 ├── backend/                     Spring Boot API (serves the built frontend in production)
 │   ├── src/main/java/com/arogyalens/
-│   │   ├── ai/                  GeminiService, PromptLibrary, AiResponseCache, AiErrors
+│   │   ├── ai/                  AiClient port, GeminiService, PromptLibrary/Templates, cache, errors
 │   │   ├── config/              Typed properties, WebConfig (CORS, SPA fallback), DATABASE_URL resolver
 │   │   ├── controller/          REST controllers (scan, voice/chat/TTS, translate, safety, health)
 │   │   ├── doctor/              Specialty suggestion + Places doctor finder
@@ -122,7 +122,10 @@ One container: Spring Boot serves the built React app (with SPA fallback) and th
 │   │   ├── service/             Document, medicine, prescription, discharge, session, voice services
 │   │   ├── dto/ model/          Records for requests/responses and domain types
 │   │   └── exception/           Single GlobalExceptionHandler with stable error codes
-│   └── src/main/resources/db/migration/   Flyway SQL
+│   └── src/main/resources/
+│       ├── prompts/             Gemini prompt templates ({{placeholder}} syntax, safety rules shared)
+│       ├── demo/                Synthetic sample analyses for demo mode
+│       └── db/migration/        Flyway SQL
 ├── frontend/                    React SPA
 │   └── src/{api,components,context,hooks,lib,pages,types,test}
 ├── .github/                     CI, CodeQL, Dependabot
