@@ -18,7 +18,7 @@ COPY --from=web /app/frontend/dist ./src/main/resources/static
 RUN mvn -q -B -DskipTests package && cp target/*.jar /app/app.jar
 
 # ---- Runtime ----
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 # Run as an unprivileged user.
 RUN useradd --system --uid 10001 --no-create-home arogya
