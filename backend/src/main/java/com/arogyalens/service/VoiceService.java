@@ -8,6 +8,9 @@ import com.arogyalens.dto.ChatResponse;
 import com.arogyalens.dto.VoiceQueryRequest;
 import com.arogyalens.dto.VoiceQueryResponse;
 import com.arogyalens.model.MedicalParameter;
+import com.arogyalens.model.TrustedSource;
+import com.arogyalens.privacy.PrivacyService;
+import com.arogyalens.source.SourceService;
 import com.arogyalens.safety.SafetyValidationService;
 import com.arogyalens.util.LanguageUtil;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -19,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
+/** Ask-anything / voice assistant: grounded, multilingual, safety-checked answers. */
 @Service
 public class VoiceService {
 
@@ -27,12 +31,18 @@ public class VoiceService {
     private final SafetyValidationService safetyValidationService;
     private final LanguageUtil languageUtil;
     private final ObjectMapper objectMapper;
+    private final PrivacyService privacyService;
+    private final SourceService sourceService;
 
     public VoiceService(SessionService sessionService,
                         GeminiService geminiService,
                         SafetyValidationService safetyValidationService,
                         LanguageUtil languageUtil,
-                        ObjectMapper objectMapper) {
+                        ObjectMapper objectMapper,
+                        PrivacyService privacyService,
+                        SourceService sourceService) {
+        this.privacyService = privacyService;
+        this.sourceService = sourceService;
         this.sessionService = sessionService;
         this.geminiService = geminiService;
         this.safetyValidationService = safetyValidationService;
@@ -40,40 +50,53 @@ public class VoiceService {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Answers a free-text health question in the requested language. Grounded in the session's
+     * document when a valid {@code sessionId} is supplied, otherwise general information.
+     * The question is PII-masked before it is sent to the AI, and the answer passes the safety layer.
+     */
     public VoiceQueryResponse query(VoiceQueryRequest request) {
         String language = languageUtil.normalize(request.language());
-        // sessionId is optional: without an uploaded document this works as a general health Q&A.
         AnalysisResponse analysis = sessionService.get(request.sessionId()).orElse(null);
         String context = sessionService.context(request.sessionId());
         if (context.isBlank()) {
             context = "(No document uploaded. Give general, non-diagnostic health information.)";
         }
+        String maskedQuery = privacyService.scanAndRedact(request.query()).redactedText();
+        boolean emergency = safetyValidationService.isEmergency(request.query());
+        List<TrustedSource> sources = sourceService.forTopic(request.query());
 
         Optional<String> ai = geminiService.generateText(
-                PromptLibrary.voiceAssistantPrompt(context, request.query(), language)
+                PromptLibrary.voiceAssistantPrompt(context, maskedQuery, language)
         );
 
         if (ai.isPresent()) {
             try {
                 JsonNode root = objectMapper.readTree(ai.get());
-                String answer = safetyValidationService.enforceSafeWording(root.path("answer").asText());
-                List<String> facts = new ArrayList<>();
-                root.path("groundedFacts").forEach(n -> facts.add(n.asText()));
-                var safety = safetyValidationService.validate(answer);
-                return new VoiceQueryResponse(
-                        request.query(),
-                        safety.sanitizedText(),
-                        language,
-                        facts,
-                        safety.notes(),
-                        analysis != null && root.path("fromDocument").asBoolean(true)
-                );
-            } catch (Exception ignored) {
-                // fall through
+                String rawAnswer = root.path("answer").asText("");
+                if (!rawAnswer.isBlank()) {
+                    List<String> facts = new ArrayList<>();
+                    root.path("groundedFacts").forEach(n -> facts.add(n.asText()));
+                    var safety = safetyValidationService.validate(rawAnswer);
+                    return new VoiceQueryResponse(
+                            request.query(),
+                            safety.sanitizedText(),
+                            language,
+                            facts,
+                            safety.notes(),
+                            analysis != null && root.path("fromDocument").asBoolean(true),
+                            sources,
+                            emergency
+                    );
+                }
+            } catch (Exception e) {
+                // malformed AI JSON: use the grounded fallback below
             }
         }
 
-        return groundedFallback(request.query(), language, analysis);
+        VoiceQueryResponse fallback = groundedFallback(request.query(), language, analysis);
+        return new VoiceQueryResponse(fallback.query(), fallback.answer(), fallback.language(),
+                fallback.groundedFacts(), fallback.safetyNotes(), fallback.fromDocument(), sources, emergency);
     }
 
     public ChatResponse chat(ChatRequest request) {
@@ -108,7 +131,7 @@ public class VoiceService {
             answer = "I couldn't answer that right now. Please try again in a moment, "
                     + "or upload a document so I can explain it, and discuss health questions with your healthcare professional.";
             var safety = safetyValidationService.validate(answer);
-            return new VoiceQueryResponse(query, safety.sanitizedText(), language, facts, safety.notes(), false);
+            return new VoiceQueryResponse(query, safety.sanitizedText(), language, facts, safety.notes(), false, List.of(), false);
         }
 
         MedicalParameter match = null;
@@ -139,6 +162,6 @@ public class VoiceService {
         }
 
         var safety = safetyValidationService.validate(answer);
-        return new VoiceQueryResponse(query, safety.sanitizedText(), language, facts, safety.notes(), true);
+        return new VoiceQueryResponse(query, safety.sanitizedText(), language, facts, safety.notes(), true, List.of(), false);
     }
 }

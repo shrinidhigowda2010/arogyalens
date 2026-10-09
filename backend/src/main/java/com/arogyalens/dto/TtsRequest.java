@@ -4,10 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/** Chat message; {@code sessionId} is optional. */
-public record ChatRequest(
-        @Size(max = 64) String sessionId,
-        @NotBlank @Size(max = 1000) String message,
+/** Text to read aloud with Gemini TTS when the device has no voice for the language. */
+public record TtsRequest(
+        @NotBlank @Size(max = 800) String text,
         @Pattern(regexp = "^[a-z]{2}$") String language
 ) {
 }

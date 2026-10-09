@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+/** Safety layer: no diagnosis claims, no medication changes, emergency awareness. */
 @Service
 public class SafetyValidationService {
 
@@ -31,6 +32,13 @@ public class SafetyValidationService {
             Pattern.compile("(?i)\\bseek (immediate |emergency )?(care|help|attention)\\b")
     );
 
+    private static final Pattern RED_FLAGS = Pattern.compile(
+            "(?i)\\b(unconscious|not breathing|can't breathe|cannot breathe|seizure|fainted|severe burn|poison(ed|ing)?|overdose|"
+                    + "slurred speech|face drooping|coughing blood|vomiting blood|suicide|kill myself|self[- ]harm)\\b");
+
+    /**
+     * Checks text for diagnosis claims and medication instructions, rewriting them into safe wording.
+     */
     public SafetyValidateResponse validate(String text) {
         if (text == null || text.isBlank()) {
             return new SafetyValidateResponse(true, text, List.of(), List.of());
@@ -75,6 +83,17 @@ public class SafetyValidationService {
         return new SafetyValidateResponse(safe, sanitized, violations.stream().distinct().toList(), notes);
     }
 
+    /** @return true when the text mentions a red-flag emergency (chest pain, stroke, etc.) */
+    public boolean isEmergency(String text) {
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+        String lower = text.toLowerCase(Locale.ROOT);
+        return EMERGENCY_PATTERNS.getFirst().matcher(lower).find()
+                || RED_FLAGS.matcher(lower).find();
+    }
+
+    /** @return the text with diagnosis claims and medication instructions rewritten safely */
     public String enforceSafeWording(String text) {
         return validate(text).sanitizedText();
     }
