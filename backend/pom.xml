@@ -23,7 +23,7 @@
         <spotless.version>2.43.0</spotless.version>
         <google-java-format.version>1.23.0</google-java-format.version>
         <checkstyle-plugin.version>3.4.0</checkstyle-plugin.version>
-        <checkstyle.version>10.18.1</checkstyle.version>
+        <checkstyle.version>14.3.0</checkstyle.version>
         <java.version>21</java.version>
     </properties>
 
