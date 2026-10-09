@@ -10,6 +10,7 @@ import com.arogyalens.model.TrustedSource;
 import java.util.List;
 import java.util.Map;
 
+/** Unified response for every scan type (report, medicine, prescription, discharge). */
 public record AnalysisResponse(
         String sessionId,
         DocumentType documentType,

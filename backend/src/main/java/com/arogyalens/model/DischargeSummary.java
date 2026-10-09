@@ -2,6 +2,7 @@ package com.arogyalens.model;
 
 import java.util.List;
 
+/** Structured sections extracted from a discharge document. */
 public record DischargeSummary(
         String reasonForAdmission,
         String treatmentPerformed,

@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Service;
 
+/** Registry of trusted health sources; never fabricates citations. */
 @Service
 public class SourceService {
 

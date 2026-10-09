@@ -1,5 +1,6 @@
 package com.arogyalens.model;
 
+/** One lab value with its unit, reference range, status and plain-language explanation. */
 public record MedicalParameter(
         String name,
         String value,

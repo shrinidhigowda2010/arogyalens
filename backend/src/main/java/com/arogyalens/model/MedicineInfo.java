@@ -2,6 +2,7 @@ package com.arogyalens.model;
 
 import java.util.List;
 
+/** General information about a medicine read from its package. */
 public record MedicineInfo(
         String name,
         String strength,

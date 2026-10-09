@@ -29,6 +29,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+/**
+ * Analyzes medical reports with Gemini, falling back to local PDF text parsing when AI is
+ * unavailable.
+ */
 @Service
 public class DocumentAnalysisService {
 

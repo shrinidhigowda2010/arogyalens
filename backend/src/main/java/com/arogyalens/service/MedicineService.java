@@ -18,6 +18,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+/** Identifies medicines from package photos and returns general information. */
 @Service
 public class MedicineService {
 

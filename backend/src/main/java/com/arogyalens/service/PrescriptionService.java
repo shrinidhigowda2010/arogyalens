@@ -20,6 +20,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+/** Turns prescription photos into a readable daily schedule. */
 @Service
 public class PrescriptionService {
 

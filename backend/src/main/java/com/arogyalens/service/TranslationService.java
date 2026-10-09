@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
+/** Translates text with Gemini, using the offline language pack as a fallback. */
 @Service
 public class TranslationService {
 

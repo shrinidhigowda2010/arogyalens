@@ -5,6 +5,7 @@ import java.util.Locale;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
+/** Built-in translations of common phrases so key UI text works without AI. */
 @Component
 public class OfflineLanguagePack {
 

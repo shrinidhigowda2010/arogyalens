@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+/** Prescription interpretation into a morning/afternoon/night schedule. */
 @RestController
 @RequestMapping("/api/prescriptions")
 public class PrescriptionController {

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/** Lists the curated trusted health sources (WHO, MoHFW, AIIMS, ...). */
 @RestController
 @RequestMapping("/api/sources")
 public class SourceController {

@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
+/** Builds grounded questions for a doctor visit from a stored session. */
 @Service
 public class DoctorQuestionService {
 

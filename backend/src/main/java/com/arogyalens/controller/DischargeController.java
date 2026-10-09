@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+/** Discharge summary scanning: section-by-section, non-diagnostic explanation. */
 @RestController
 @RequestMapping("/api/discharge")
 public class DischargeController {

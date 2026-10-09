@@ -18,6 +18,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+/** Explains discharge summaries using Gemini, with a demo fallback. */
 @Service
 public class DischargeSummaryService {
 

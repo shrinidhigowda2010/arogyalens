@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/** Translates explanations into supported Indian languages. */
 @RestController
 @RequestMapping("/api/translate")
 public class TranslateController {

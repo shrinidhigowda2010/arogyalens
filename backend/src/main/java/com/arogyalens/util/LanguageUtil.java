@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
+/** Supported language codes and their display names. */
 @Component
 public class LanguageUtil {
 

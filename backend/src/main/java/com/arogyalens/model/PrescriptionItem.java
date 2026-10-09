@@ -1,5 +1,6 @@
 package com.arogyalens.model;
 
+/** One prescribed medicine with its dose timing. */
 public record PrescriptionItem(
         String medicineName,
         String strength,

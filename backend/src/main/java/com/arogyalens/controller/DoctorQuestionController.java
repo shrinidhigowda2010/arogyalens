@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/** Generates questions a patient can ask their doctor about a scanned document. */
 @RestController
 @RequestMapping("/api/doctor-questions")
 public class DoctorQuestionController {

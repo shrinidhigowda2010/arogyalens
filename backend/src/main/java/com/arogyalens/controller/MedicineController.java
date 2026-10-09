@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+/** Medicine package scanning with general, non-prescriptive information. */
 @RestController
 @RequestMapping("/api/medicines")
 public class MedicineController {

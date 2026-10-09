@@ -7,6 +7,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 
+/**
+ * Privacy Shield: detects and masks names, phone numbers, emails, IDs, dates of birth and
+ * addresses.
+ */
 @Service
 public class PrivacyService {
 

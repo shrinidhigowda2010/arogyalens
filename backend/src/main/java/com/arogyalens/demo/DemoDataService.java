@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
+/** Deterministic sample analyses used by demo mode and as offline fallbacks. */
 @Service
 public class DemoDataService {
 

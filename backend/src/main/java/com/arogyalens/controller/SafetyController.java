@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/** Exposes the medical safety layer for validating arbitrary text. */
 @RestController
 @RequestMapping("/api/safety")
 public class SafetyController {
