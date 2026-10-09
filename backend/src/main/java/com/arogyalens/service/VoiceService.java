@@ -1,6 +1,6 @@
 package com.arogyalens.service;
 
-import com.arogyalens.ai.GeminiService;
+import com.arogyalens.ai.AiClient;
 import com.arogyalens.ai.PromptLibrary;
 import com.arogyalens.dto.AnalysisResponse;
 import com.arogyalens.dto.ChatRequest;
@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
 public class VoiceService {
 
     private final SessionService sessionService;
-    private final GeminiService geminiService;
+    private final AiClient aiClient;
     private final SafetyValidationService safetyValidationService;
     private final LanguageUtil languageUtil;
     private final ObjectMapper objectMapper;
@@ -36,7 +36,7 @@ public class VoiceService {
 
     public VoiceService(
             SessionService sessionService,
-            GeminiService geminiService,
+            AiClient aiClient,
             SafetyValidationService safetyValidationService,
             LanguageUtil languageUtil,
             ObjectMapper objectMapper,
@@ -45,7 +45,7 @@ public class VoiceService {
         this.privacyService = privacyService;
         this.sourceService = sourceService;
         this.sessionService = sessionService;
-        this.geminiService = geminiService;
+        this.aiClient = aiClient;
         this.safetyValidationService = safetyValidationService;
         this.languageUtil = languageUtil;
         this.objectMapper = objectMapper;
@@ -68,7 +68,7 @@ public class VoiceService {
         List<TrustedSource> sources = sourceService.forTopic(request.query());
 
         Optional<String> ai =
-                geminiService.generateText(
+                aiClient.generateText(
                         PromptLibrary.voiceAssistantPrompt(context, maskedQuery, language));
 
         if (ai.isPresent()) {

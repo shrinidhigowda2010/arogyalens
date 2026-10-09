@@ -1,6 +1,6 @@
 package com.arogyalens.service;
 
-import com.arogyalens.ai.GeminiService;
+import com.arogyalens.ai.AiClient;
 import com.arogyalens.ai.PromptLibrary;
 import com.arogyalens.dto.AnalysisResponse;
 import com.arogyalens.model.MedicalParameter;
@@ -17,17 +17,17 @@ import org.springframework.stereotype.Service;
 public class DoctorQuestionService {
 
     private final SessionService sessionService;
-    private final GeminiService geminiService;
+    private final AiClient aiClient;
     private final SafetyValidationService safetyValidationService;
     private final ObjectMapper objectMapper;
 
     public DoctorQuestionService(
             SessionService sessionService,
-            GeminiService geminiService,
+            AiClient aiClient,
             SafetyValidationService safetyValidationService,
             ObjectMapper objectMapper) {
         this.sessionService = sessionService;
-        this.geminiService = geminiService;
+        this.aiClient = aiClient;
         this.safetyValidationService = safetyValidationService;
         this.objectMapper = objectMapper;
     }
@@ -38,8 +38,7 @@ public class DoctorQuestionService {
             return response.doctorQuestions();
         }
         String context = sessionService.context(sessionId);
-        return geminiService
-                .generateText(PromptLibrary.doctorQuestionPrompt(context))
+        return aiClient.generateText(PromptLibrary.doctorQuestionPrompt(context))
                 .map(this::parseQuestions)
                 .orElse(defaultQuestions());
     }

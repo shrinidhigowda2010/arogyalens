@@ -1,7 +1,7 @@
 package com.arogyalens.service;
 
+import com.arogyalens.ai.AiClient;
 import com.arogyalens.ai.AiErrors;
-import com.arogyalens.ai.GeminiService;
 import com.arogyalens.ai.PromptLibrary;
 import com.arogyalens.config.ArogyaLensProperties;
 import com.arogyalens.demo.DemoDataService;
@@ -27,7 +27,7 @@ public class PrescriptionService {
 
     private final FileValidationUtil fileValidationUtil;
     private final PrivacyService privacyService;
-    private final GeminiService geminiService;
+    private final AiClient aiClient;
     private final SafetyValidationService safetyValidationService;
     private final SourceService sourceService;
     private final SessionService sessionService;
@@ -40,7 +40,7 @@ public class PrescriptionService {
     public PrescriptionService(
             FileValidationUtil fileValidationUtil,
             PrivacyService privacyService,
-            GeminiService geminiService,
+            AiClient aiClient,
             SafetyValidationService safetyValidationService,
             SourceService sourceService,
             SessionService sessionService,
@@ -51,7 +51,7 @@ public class PrescriptionService {
             ObjectMapper objectMapper) {
         this.fileValidationUtil = fileValidationUtil;
         this.privacyService = privacyService;
-        this.geminiService = geminiService;
+        this.aiClient = aiClient;
         this.safetyValidationService = safetyValidationService;
         this.sourceService = sourceService;
         this.sessionService = sessionService;
@@ -87,12 +87,12 @@ public class PrescriptionService {
                 }
             }
 
-            if (!geminiService.isAvailable()) {
+            if (!aiClient.isAvailable()) {
                 throw AiErrors.notConfigured();
             }
 
             String ai =
-                    geminiService.generateJson(
+                    aiClient.generateJson(
                             PromptLibrary.prescriptionPrompt(),
                             file.getBytes(),
                             mimeType,

@@ -1,6 +1,6 @@
 package com.arogyalens.doctor;
 
-import com.arogyalens.ai.GeminiService;
+import com.arogyalens.ai.AiClient;
 import com.arogyalens.ai.PromptLibrary;
 import com.arogyalens.doctor.DoctorDtos.SearchLink;
 import com.arogyalens.doctor.DoctorDtos.SearchRequest;
@@ -87,7 +87,7 @@ public class DoctorFinderService {
         }
     }
 
-    private final GeminiService geminiService;
+    private final AiClient aiClient;
     private final PlacesClient placesClient;
     private final PrivacyService privacyService;
     private final SafetyValidationService safetyValidationService;
@@ -95,13 +95,13 @@ public class DoctorFinderService {
     private final ObjectMapper objectMapper;
 
     public DoctorFinderService(
-            GeminiService geminiService,
+            AiClient aiClient,
             PlacesClient placesClient,
             PrivacyService privacyService,
             SafetyValidationService safetyValidationService,
             LanguageUtil languageUtil,
             ObjectMapper objectMapper) {
-        this.geminiService = geminiService;
+        this.aiClient = aiClient;
         this.placesClient = placesClient;
         this.privacyService = privacyService;
         this.safetyValidationService = safetyValidationService;
@@ -122,8 +122,7 @@ public class DoctorFinderService {
                     "rules");
         }
         String masked = privacyService.scanAndRedact(condition).redactedText();
-        Optional<String> ai =
-                geminiService.generateText(PromptLibrary.specialtyPrompt(masked, lang));
+        Optional<String> ai = aiClient.generateText(PromptLibrary.specialtyPrompt(masked, lang));
         if (ai.isPresent()) {
             try {
                 JsonNode root = objectMapper.readTree(ai.get());

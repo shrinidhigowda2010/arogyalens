@@ -1,6 +1,6 @@
 package com.arogyalens.service;
 
-import com.arogyalens.ai.GeminiService;
+import com.arogyalens.ai.AiClient;
 import com.arogyalens.ai.PromptLibrary;
 import com.arogyalens.dto.TranslateRequest;
 import com.arogyalens.dto.TranslateResponse;
@@ -16,17 +16,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class TranslationService {
 
-    private final GeminiService geminiService;
+    private final AiClient aiClient;
     private final LanguageUtil languageUtil;
     private final ObjectMapper objectMapper;
     private final OfflineLanguagePack offlineLanguagePack;
 
     public TranslationService(
-            GeminiService geminiService,
+            AiClient aiClient,
             LanguageUtil languageUtil,
             ObjectMapper objectMapper,
             OfflineLanguagePack offlineLanguagePack) {
-        this.geminiService = geminiService;
+        this.aiClient = aiClient;
         this.languageUtil = languageUtil;
         this.objectMapper = objectMapper;
         this.offlineLanguagePack = offlineLanguagePack;
@@ -62,8 +62,7 @@ public class TranslationService {
         }
 
         String translated =
-                geminiService
-                        .generateText(PromptLibrary.translationPrompt(lang, source))
+                aiClient.generateText(PromptLibrary.translationPrompt(lang, source))
                         .map(this::readTranslated)
                         .orElse(source);
 

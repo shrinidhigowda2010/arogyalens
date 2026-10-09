@@ -34,7 +34,7 @@ import org.springframework.web.client.RestClientResponseException;
  * </ul>
  */
 @Service
-public class GeminiService {
+public class GeminiService implements AiClient {
 
     static final String BASE_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent";
@@ -66,6 +66,7 @@ public class GeminiService {
     /**
      * @return true when AI is enabled and a non-blank API key is configured.
      */
+    @Override
     public boolean isAvailable() {
         return properties.ai().enabled() && !cleanKey(properties.ai().apiKey()).isEmpty();
     }
@@ -103,6 +104,7 @@ public class GeminiService {
      *
      * @throws ArogyaLensException with a code from {@link AiErrors} on failure
      */
+    @Override
     public String generateJson(String prompt) {
         requireAvailable();
         Map<String, Object> body =
@@ -117,6 +119,7 @@ public class GeminiService {
      *
      * @throws ArogyaLensException with a code from {@link AiErrors} on failure
      */
+    @Override
     public String generateJson(String prompt, byte[] fileBytes, String mimeType, String what) {
         requireAvailable();
         String data = Base64.getEncoder().encodeToString(fileBytes);
@@ -144,6 +147,7 @@ public class GeminiService {
      * Best-effort text generation that returns empty instead of throwing (for optional
      * enrichments).
      */
+    @Override
     public Optional<String> generateText(String prompt) {
         if (!isAvailable()) {
             return Optional.empty();
@@ -160,6 +164,7 @@ public class GeminiService {
      * Synthesises speech with Gemini TTS and returns a WAV file (16-bit mono PCM, 24 kHz). Used
      * only when the user's device has no voice for the selected language.
      */
+    @Override
     public byte[] synthesizeSpeech(String text) {
         requireAvailable();
         Map<String, Object> body =

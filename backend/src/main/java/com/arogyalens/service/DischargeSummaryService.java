@@ -1,7 +1,7 @@
 package com.arogyalens.service;
 
+import com.arogyalens.ai.AiClient;
 import com.arogyalens.ai.AiErrors;
-import com.arogyalens.ai.GeminiService;
 import com.arogyalens.ai.PromptLibrary;
 import com.arogyalens.config.ArogyaLensProperties;
 import com.arogyalens.demo.DemoDataService;
@@ -24,7 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class DischargeSummaryService {
 
     private final FileValidationUtil fileValidationUtil;
-    private final GeminiService geminiService;
+    private final AiClient aiClient;
     private final SafetyValidationService safetyValidationService;
     private final SourceService sourceService;
     private final SessionService sessionService;
@@ -35,7 +35,7 @@ public class DischargeSummaryService {
 
     public DischargeSummaryService(
             FileValidationUtil fileValidationUtil,
-            GeminiService geminiService,
+            AiClient aiClient,
             SafetyValidationService safetyValidationService,
             SourceService sourceService,
             SessionService sessionService,
@@ -44,7 +44,7 @@ public class DischargeSummaryService {
             ArogyaLensProperties properties,
             ObjectMapper objectMapper) {
         this.fileValidationUtil = fileValidationUtil;
-        this.geminiService = geminiService;
+        this.aiClient = aiClient;
         this.safetyValidationService = safetyValidationService;
         this.sourceService = sourceService;
         this.sessionService = sessionService;
@@ -66,14 +66,14 @@ public class DischargeSummaryService {
         }
         scanSupport.requireFile(file, "Please upload a discharge summary image or PDF.");
         String mimeType = fileValidationUtil.validate(file);
-        if (!geminiService.isAvailable()) {
+        if (!aiClient.isAvailable()) {
             throw AiErrors.notConfigured();
         }
 
         String id = sessionService.createId();
         try {
             String ai =
-                    geminiService.generateJson(
+                    aiClient.generateJson(
                             PromptLibrary.dischargePrompt(),
                             file.getBytes(),
                             mimeType,

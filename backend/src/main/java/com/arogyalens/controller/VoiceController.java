@@ -1,6 +1,6 @@
 package com.arogyalens.controller;
 
-import com.arogyalens.ai.GeminiService;
+import com.arogyalens.ai.AiClient;
 import com.arogyalens.dto.ChatRequest;
 import com.arogyalens.dto.ChatResponse;
 import com.arogyalens.dto.TtsRequest;
@@ -24,13 +24,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class VoiceController {
 
     private final VoiceService voiceService;
-    private final GeminiService geminiService;
+    private final AiClient aiClient;
     private final HistoryService historyService;
 
     public VoiceController(
-            VoiceService voiceService, GeminiService geminiService, HistoryService historyService) {
+            VoiceService voiceService, AiClient aiClient, HistoryService historyService) {
         this.voiceService = voiceService;
-        this.geminiService = geminiService;
+        this.aiClient = aiClient;
         this.historyService = historyService;
     }
 
@@ -62,7 +62,7 @@ public class VoiceController {
      */
     @PostMapping(value = "/voice/tts", produces = "audio/wav")
     public ResponseEntity<byte[]> tts(@Valid @RequestBody TtsRequest request) {
-        byte[] wav = geminiService.synthesizeSpeech(request.text());
+        byte[] wav = aiClient.synthesizeSpeech(request.text());
         return ResponseEntity.ok().contentType(MediaType.parseMediaType("audio/wav")).body(wav);
     }
 }

@@ -1,7 +1,7 @@
 package com.arogyalens.service;
 
+import com.arogyalens.ai.AiClient;
 import com.arogyalens.ai.AiErrors;
-import com.arogyalens.ai.GeminiService;
 import com.arogyalens.ai.PromptLibrary;
 import com.arogyalens.config.ArogyaLensProperties;
 import com.arogyalens.demo.DemoDataService;
@@ -42,7 +42,7 @@ public class DocumentAnalysisService {
 
     private final FileValidationUtil fileValidationUtil;
     private final PrivacyService privacyService;
-    private final GeminiService geminiService;
+    private final AiClient aiClient;
     private final SafetyValidationService safetyValidationService;
     private final SourceService sourceService;
     private final SessionService sessionService;
@@ -57,7 +57,7 @@ public class DocumentAnalysisService {
     public DocumentAnalysisService(
             FileValidationUtil fileValidationUtil,
             PrivacyService privacyService,
-            GeminiService geminiService,
+            AiClient aiClient,
             SafetyValidationService safetyValidationService,
             SourceService sourceService,
             SessionService sessionService,
@@ -70,7 +70,7 @@ public class DocumentAnalysisService {
             ObjectMapper objectMapper) {
         this.fileValidationUtil = fileValidationUtil;
         this.privacyService = privacyService;
-        this.geminiService = geminiService;
+        this.aiClient = aiClient;
         this.safetyValidationService = safetyValidationService;
         this.sourceService = sourceService;
         this.sessionService = sessionService;
@@ -104,10 +104,10 @@ public class DocumentAnalysisService {
             Optional<String> extractedText = localDocumentParser.extractText(file);
             ArogyaLensException aiError = null;
 
-            if (geminiService.isAvailable()) {
+            if (aiClient.isAvailable()) {
                 try {
                     String aiJson =
-                            geminiService.generateJson(
+                            aiClient.generateJson(
                                     PromptLibrary.documentExtractionPrompt(hint),
                                     file.getBytes(),
                                     mimeType,
@@ -139,7 +139,7 @@ public class DocumentAnalysisService {
             if (aiError != null) {
                 throw aiError;
             }
-            if (!geminiService.isAvailable()) {
+            if (!aiClient.isAvailable()) {
                 throw AiErrors.notConfigured();
             }
             throw AiErrors.unreadable("document");

@@ -13,8 +13,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.arogyalens.ai.AiClient;
 import com.arogyalens.ai.AiErrors;
-import com.arogyalens.ai.GeminiService;
 import java.io.InputStream;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,7 +43,7 @@ class ScanFlowIntegrationTest {
 
     @Autowired MockMvc mockMvc;
 
-    @MockBean GeminiService gemini;
+    @MockBean AiClient gemini;
 
     @BeforeEach
     void aiOn() {
