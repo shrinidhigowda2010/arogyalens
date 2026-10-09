@@ -38,6 +38,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class DocumentAnalysisService {
 
+    private static final String LOCAL_LABEL = "Blood Test Report";
     private static final Logger LOG = LoggerFactory.getLogger(DocumentAnalysisService.class);
 
     private final FileValidationUtil fileValidationUtil;
@@ -103,55 +104,57 @@ public class DocumentAnalysisService {
         try {
             Optional<String> extractedText = localDocumentParser.extractText(file);
             ArogyaLensException aiError = null;
-
             if (aiClient.isAvailable()) {
                 try {
-                    String aiJson =
-                            aiClient.generateJson(
-                                    PromptLibrary.documentExtractionPrompt(hint),
-                                    file.getBytes(),
-                                    mimeType,
-                                    "document");
-                    return fromAi(id, aiJson, lang);
+                    return analyzeWithAi(id, file.getBytes(), mimeType, hint, lang);
                 } catch (ArogyaLensException ex) {
                     aiError = ex; // fall back to local PDF text parsing below
                 }
             }
-
-            if (extractedText.isPresent()) {
-                List<MedicalParameter> parameters =
-                        localDocumentParser.parseLabParameters(extractedText.get());
-                if (!parameters.isEmpty()) {
-                    PrivacyService.PrivacyResult privacy =
-                            privacyService.scanAndRedact(extractedText.get());
-                    return buildResponse(
-                            id,
-                            DocumentType.LAB_REPORT,
-                            "Blood Test Report",
-                            parameters,
-                            privacy,
-                            false,
-                            lang,
-                            privacy.redactedText());
-                }
+            Optional<AnalysisResponse> local =
+                    extractedText.flatMap(text -> analyzeLocally(id, text, lang));
+            if (local.isPresent()) {
+                return local.get();
             }
-
-            if (aiError != null) {
-                throw aiError;
-            }
-            if (!aiClient.isAvailable()) {
-                throw AiErrors.notConfigured();
-            }
-            throw AiErrors.unreadable("document");
-        } catch (ArogyaLensException ex) {
-            throw ex;
+            throw aiError != null ? aiError : noResultError();
         } catch (IOException e) {
             LOG.warn("Document analysis failed: {}", e.getClass().getSimpleName());
-            throw new ArogyaLensException(
-                    "ANALYSIS_FAILED",
-                    "Analysis failed",
+            throw ScanSupport.analysisFailed(
+                    "Document",
                     "We couldn't analyze this file. Please try another clearer JPG, PNG, or PDF.");
         }
+    }
+
+    private AnalysisResponse analyzeWithAi(
+            String id, byte[] bytes, String mimeType, String hint, String lang)
+            throws JsonProcessingException {
+        String aiJson =
+                aiClient.generateJson(
+                        PromptLibrary.documentExtractionPrompt(hint), bytes, mimeType, "document");
+        return fromAi(id, aiJson, lang);
+    }
+
+    /** Offline path: parses lab values from PDF text without AI. */
+    private Optional<AnalysisResponse> analyzeLocally(String id, String text, String lang) {
+        List<MedicalParameter> parameters = localDocumentParser.parseLabParameters(text);
+        if (parameters.isEmpty()) {
+            return Optional.empty();
+        }
+        PrivacyService.PrivacyResult privacy = privacyService.scanAndRedact(text);
+        return Optional.of(
+                buildResponse(
+                        id,
+                        DocumentType.LAB_REPORT,
+                        LOCAL_LABEL,
+                        parameters,
+                        privacy,
+                        false,
+                        lang,
+                        privacy.redactedText()));
+    }
+
+    private ArogyaLensException noResultError() {
+        return aiClient.isAvailable() ? AiErrors.unreadable("document") : AiErrors.notConfigured();
     }
 
     private AnalysisResponse fromAi(String id, String json, String lang)
