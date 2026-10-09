@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -171,7 +172,8 @@ public class HistoryService {
                             language == null || language.isBlank() ? "en" : truncate(language, 8),
                             Instant.now(clock)));
             prune(deviceId);
-        } catch (RuntimeException ex) {
+        } catch (DataAccessException ex) {
+            // History is best-effort: a database problem must never fail the user's request.
             LOG.warn("History write skipped: {}", ex.getClass().getSimpleName());
         }
     }
