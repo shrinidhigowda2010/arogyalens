@@ -1,0 +1,98 @@
+{
+  "documentType" : "MEDICINE",
+  "documentLabel" : "Medicine Package",
+  "demo" : true,
+  "privacyShield" : {
+    "findings" : [ ],
+    "message" : "ArogyaLens automatically detects and masks common personal identifiers before processing.",
+    "redacted" : false
+  },
+  "processingSteps" : [ {
+    "id" : "privacy",
+    "label" : "Protecting personal information...",
+    "status" : "done"
+  }, {
+    "id" : "understand",
+    "label" : "Understanding document...",
+    "status" : "done"
+  }, {
+    "id" : "extract",
+    "label" : "Extracting medical information...",
+    "status" : "done"
+  }, {
+    "id" : "simplify",
+    "label" : "Simplifying medical terminology...",
+    "status" : "done"
+  }, {
+    "id" : "translate",
+    "label" : "Preparing multilingual explanation...",
+    "status" : "done"
+  }, {
+    "id" : "sources",
+    "label" : "Finding trusted sources...",
+    "status" : "done"
+  }, {
+    "id" : "safety",
+    "label" : "Running safety check...",
+    "status" : "done"
+  } ],
+  "pages" : 1,
+  "parametersDetected" : 0,
+  "parameters" : [ ],
+  "dashboard" : {
+    "total" : 0,
+    "withinRange" : 0,
+    "needsDiscussion" : 0,
+    "importantAttention" : 0
+  },
+  "doctorQuestions" : [ "What is this medicine intended for in my care plan?", "How and when should I take it according to my prescription?", "Are there side effects I should watch for?", "Does it interact with my other medicines?", "When should I follow up about this medicine?" ],
+  "sources" : [ {
+    "id" : "ipc",
+    "name" : "Indian Pharmacopoeia Commission",
+    "title" : "Official medicine information",
+    "description" : "Authoritative pharmaceutical standards and medicine information in India.",
+    "url" : "https://www.ipc.gov.in/",
+    "category" : "GENERAL_HEALTH_INFORMATION"
+  }, {
+    "id" : "cdsco",
+    "name" : "Central Drugs Standard Control Organization",
+    "title" : "Drug regulatory information",
+    "description" : "Official Indian drug regulatory authority resources.",
+    "url" : "https://cdsco.gov.in/",
+    "category" : "GENERAL_HEALTH_INFORMATION"
+  } ],
+  "safetyNotes" : [ "Follow the prescription provided by your healthcare professional.", "DEMO DATA — NOT A REAL PATIENT" ],
+  "medicine" : {
+    "name" : "Metformin",
+    "strength" : "500 mg",
+    "dosageForm" : "Tablet",
+    "manufacturer" : "Demo Pharma Ltd",
+    "generalUse" : "Metformin is commonly used as part of blood sugar management plans prescribed by clinicians. This is general information, not personal advice.",
+    "commonSideEffects" : [ "Stomach upset", "Nausea", "Diarrhea (commonly reported)" ],
+    "precautions" : [ "Follow the prescription provided by your healthcare professional.", "Ask a pharmacist or doctor before combining with other medicines." ],
+    "warnings" : [ "Do not start, stop, or change this medicine based on this scan alone." ],
+    "confidence" : 0.94,
+    "sources" : [ {
+      "id" : "ipc",
+      "name" : "Indian Pharmacopoeia Commission",
+      "title" : "Official medicine information",
+      "description" : "Authoritative pharmaceutical standards and medicine information in India.",
+      "url" : "https://www.ipc.gov.in/",
+      "category" : "GENERAL_HEALTH_INFORMATION"
+    }, {
+      "id" : "cdsco",
+      "name" : "Central Drugs Standard Control Organization",
+      "title" : "Drug regulatory information",
+      "description" : "Official Indian drug regulatory authority resources.",
+      "url" : "https://cdsco.gov.in/",
+      "category" : "GENERAL_HEALTH_INFORMATION"
+    } ]
+  },
+  "prescriptionItems" : null,
+  "dischargeSummary" : null,
+  "familySummary" : "FAMILY SUMMARY\n\nThe scanned medicine appears to be Metformin 500 mg tablet.\nThis is general information only and does not tell anyone how to take medicine.\nPlease confirm all instructions with a doctor or pharmacist.\n\nDEMO DATA — NOT A REAL PATIENT",
+  "translations" : { },
+  "originalPreviewNote" : "Original medicine image retained for verification.",
+  "aiUsed" : false,
+  "disclaimer" : "We don't replace the doctor. We make healthcare easier to understand."
+}

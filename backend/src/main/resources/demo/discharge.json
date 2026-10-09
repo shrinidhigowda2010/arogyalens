@@ -1,0 +1,112 @@
+{
+  "documentType" : "DISCHARGE_SUMMARY",
+  "documentLabel" : "Discharge Summary",
+  "demo" : true,
+  "privacyShield" : {
+    "findings" : [ {
+      "type" : "Patient name",
+      "maskedValue" : "An****ma",
+      "redacted" : true
+    }, {
+      "type" : "Phone number",
+      "maskedValue" : "98****10",
+      "redacted" : true
+    }, {
+      "type" : "Email",
+      "maskedValue" : "an****om",
+      "redacted" : true
+    }, {
+      "type" : "Address",
+      "maskedValue" : "42****ru",
+      "redacted" : true
+    }, {
+      "type" : "Patient ID",
+      "maskedValue" : "UH****51",
+      "redacted" : true
+    }, {
+      "type" : "Date of birth",
+      "maskedValue" : "12****88",
+      "redacted" : true
+    } ],
+    "message" : "ArogyaLens automatically detects and masks common personal identifiers before processing.",
+    "redacted" : true
+  },
+  "processingSteps" : [ {
+    "id" : "privacy",
+    "label" : "Protecting personal information...",
+    "status" : "done"
+  }, {
+    "id" : "understand",
+    "label" : "Understanding document...",
+    "status" : "done"
+  }, {
+    "id" : "extract",
+    "label" : "Extracting medical information...",
+    "status" : "done"
+  }, {
+    "id" : "simplify",
+    "label" : "Simplifying medical terminology...",
+    "status" : "done"
+  }, {
+    "id" : "translate",
+    "label" : "Preparing multilingual explanation...",
+    "status" : "done"
+  }, {
+    "id" : "sources",
+    "label" : "Finding trusted sources...",
+    "status" : "done"
+  }, {
+    "id" : "safety",
+    "label" : "Running safety check...",
+    "status" : "done"
+  } ],
+  "pages" : 2,
+  "parametersDetected" : 0,
+  "parameters" : [ ],
+  "dashboard" : {
+    "total" : 0,
+    "withinRange" : 0,
+    "needsDiscussion" : 0,
+    "importantAttention" : 0
+  },
+  "doctorQuestions" : [ "Which findings from the admission are most important for me to monitor at home?", "Which medicines from the discharge list should I continue, and for how long?", "What warning signs mean I should seek urgent care?", "Do I need any repeat tests before the follow-up visit?", "Who should I contact if symptoms return before the OPD date?" ],
+  "sources" : [ {
+    "id" : "who-lab",
+    "name" : "World Health Organization",
+    "title" : "Laboratory and diagnostic information",
+    "description" : "Official global health guidance for interpreting common health topics.",
+    "url" : "https://www.who.int/health-topics",
+    "category" : "GENERAL_HEALTH_INFORMATION"
+  }, {
+    "id" : "aiims",
+    "name" : "AIIMS",
+    "title" : "Patient education resources",
+    "description" : "Institutional information from a leading Indian medical institute.",
+    "url" : "https://www.aiims.edu/",
+    "category" : "GENERAL_HEALTH_INFORMATION"
+  }, {
+    "id" : "mohfw",
+    "name" : "Ministry of Health and Family Welfare, Government of India",
+    "title" : "National health resources",
+    "description" : "Government of India public health information for patients and caregivers.",
+    "url" : "https://www.mohfw.gov.in/",
+    "category" : "GENERAL_HEALTH_INFORMATION"
+  } ],
+  "safetyNotes" : [ "This is a simplified understanding aid, not medical advice.", "DEMO DATA — NOT A REAL PATIENT" ],
+  "medicine" : null,
+  "prescriptionItems" : null,
+  "dischargeSummary" : {
+    "reasonForAdmission" : "Short hospital stay for evaluation of fever and dehydration (as written in the sample discharge note).",
+    "treatmentPerformed" : "Supportive care and observation were documented. No surgical procedure is listed in the sample note.",
+    "importantFindings" : [ "Fever settled during stay", "Hydration improved", "Labs reviewed before discharge" ],
+    "medicinesListed" : [ "Oral rehydration guidance", "Paracetamol as advised", "Continue home medicines only if previously prescribed" ],
+    "followUpInstructions" : [ "Follow up in OPD in 5 days", "Return earlier if symptoms worsen" ],
+    "warningSigns" : [ "High fever returning", "Persistent vomiting", "Severe weakness or confusion" ],
+    "doctorQuestions" : [ "Which findings from the admission are most important for me to monitor at home?", "Which medicines from the discharge list should I continue, and for how long?", "What warning signs mean I should seek urgent care?", "Do I need any repeat tests before the follow-up visit?", "Who should I contact if symptoms return before the OPD date?" ]
+  },
+  "familySummary" : "FAMILY SUMMARY\n\nThe discharge note describes a short hospital stay and lists follow-up instructions and warning signs.\nPlease keep the original discharge summary for the doctor visit.\n\nDEMO DATA — NOT A REAL PATIENT",
+  "translations" : { },
+  "originalPreviewNote" : "Original discharge document retained for verification.",
+  "aiUsed" : false,
+  "disclaimer" : "We don't replace the doctor. We make healthcare easier to understand."
+}

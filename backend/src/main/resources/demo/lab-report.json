@@ -1,0 +1,215 @@
+{
+  "documentType" : "LAB_REPORT",
+  "documentLabel" : "Blood Test Report",
+  "demo" : true,
+  "privacyShield" : {
+    "findings" : [ {
+      "type" : "Patient name",
+      "maskedValue" : "An****ma",
+      "redacted" : true
+    }, {
+      "type" : "Phone number",
+      "maskedValue" : "98****10",
+      "redacted" : true
+    }, {
+      "type" : "Email",
+      "maskedValue" : "an****om",
+      "redacted" : true
+    }, {
+      "type" : "Address",
+      "maskedValue" : "42****ru",
+      "redacted" : true
+    }, {
+      "type" : "Patient ID",
+      "maskedValue" : "UH****51",
+      "redacted" : true
+    }, {
+      "type" : "Date of birth",
+      "maskedValue" : "12****88",
+      "redacted" : true
+    } ],
+    "message" : "ArogyaLens automatically detects and masks common personal identifiers before processing.",
+    "redacted" : true
+  },
+  "processingSteps" : [ {
+    "id" : "privacy",
+    "label" : "Protecting personal information...",
+    "status" : "done"
+  }, {
+    "id" : "understand",
+    "label" : "Understanding document...",
+    "status" : "done"
+  }, {
+    "id" : "extract",
+    "label" : "Extracting medical information...",
+    "status" : "done"
+  }, {
+    "id" : "simplify",
+    "label" : "Simplifying medical terminology...",
+    "status" : "done"
+  }, {
+    "id" : "translate",
+    "label" : "Preparing multilingual explanation...",
+    "status" : "done"
+  }, {
+    "id" : "sources",
+    "label" : "Finding trusted sources...",
+    "status" : "done"
+  }, {
+    "id" : "safety",
+    "label" : "Running safety check...",
+    "status" : "done"
+  } ],
+  "pages" : 2,
+  "parametersDetected" : 11,
+  "parameters" : [ {
+    "name" : "Hemoglobin",
+    "value" : "10.2",
+    "unit" : "g/dL",
+    "referenceRange" : "12.0-15.0",
+    "status" : "OUTSIDE_RANGE",
+    "explanation" : "Hemoglobin carries oxygen in the blood. This value is below the reference range shown on the report.",
+    "simpleExplanation" : "Hemoglobin is like the delivery truck that carries oxygen. Your report shows a lower number than the usual range printed here.",
+    "confidence" : 0.96,
+    "lowConfidence" : false
+  }, {
+    "name" : "WBC",
+    "value" : "7.8",
+    "unit" : "x10^3/uL",
+    "referenceRange" : "4.0-11.0",
+    "status" : "WITHIN_RANGE",
+    "explanation" : "White blood cells help the body respond to infection. This value is within the provided reference range.",
+    "simpleExplanation" : "These are cells that help protect the body. This number looks inside the usual range on the report.",
+    "confidence" : 0.95,
+    "lowConfidence" : false
+  }, {
+    "name" : "Platelets",
+    "value" : "245",
+    "unit" : "x10^3/uL",
+    "referenceRange" : "150-450",
+    "status" : "WITHIN_RANGE",
+    "explanation" : "Platelets help blood clot. This value is within the provided reference range.",
+    "simpleExplanation" : "Platelets help stop bleeding. This number is inside the usual range shown.",
+    "confidence" : 0.94,
+    "lowConfidence" : false
+  }, {
+    "name" : "Fasting Glucose",
+    "value" : "118",
+    "unit" : "mg/dL",
+    "referenceRange" : "70-100",
+    "status" : "REQUIRES_DISCUSSION",
+    "explanation" : "This fasting glucose value is outside the reference range shown. Discuss it with your healthcare professional in the context of your overall health.",
+    "simpleExplanation" : "This checks sugar in the blood after fasting. The number is higher than the range printed on the report, so it is worth asking your doctor about.",
+    "confidence" : 0.93,
+    "lowConfidence" : false
+  }, {
+    "name" : "HbA1c",
+    "value" : "7.8",
+    "unit" : "%",
+    "referenceRange" : "<5.7",
+    "status" : "IMPORTANT_ATTENTION",
+    "explanation" : "HbA1c estimates average blood sugar over the previous few months. This result is above many commonly used targets, although individual targets can differ. Discuss it with your healthcare professional.",
+    "simpleExplanation" : "HbA1c is like a report card for blood sugar over a few months. This number is higher than many common targets, so it is important to talk with your doctor.",
+    "confidence" : 0.97,
+    "lowConfidence" : false
+  }, {
+    "name" : "TSH",
+    "value" : "2.1",
+    "unit" : "uIU/mL",
+    "referenceRange" : "0.4-4.0",
+    "status" : "WITHIN_RANGE",
+    "explanation" : "TSH is a thyroid-related hormone test. This value is within the provided reference range.",
+    "simpleExplanation" : "This test relates to the thyroid gland. The number is inside the usual range shown.",
+    "confidence" : 0.95,
+    "lowConfidence" : false
+  }, {
+    "name" : "Total Cholesterol",
+    "value" : "210",
+    "unit" : "mg/dL",
+    "referenceRange" : "<200",
+    "status" : "REQUIRES_DISCUSSION",
+    "explanation" : "Total cholesterol is outside the target shown on the report. A healthcare professional can interpret this with other lipid values and your history.",
+    "simpleExplanation" : "Cholesterol is a fat-like substance in blood. This total number is a bit above the target printed here.",
+    "confidence" : 0.92,
+    "lowConfidence" : false
+  }, {
+    "name" : "HDL",
+    "value" : "42",
+    "unit" : "mg/dL",
+    "referenceRange" : ">40",
+    "status" : "WITHIN_RANGE",
+    "explanation" : "HDL is often called 'good' cholesterol. This value meets the target shown.",
+    "simpleExplanation" : "HDL is one kind of cholesterol that is often considered helpful. This number meets the target on the report.",
+    "confidence" : 0.91,
+    "lowConfidence" : false
+  }, {
+    "name" : "LDL",
+    "value" : "138",
+    "unit" : "mg/dL",
+    "referenceRange" : "<100",
+    "status" : "REQUIRES_DISCUSSION",
+    "explanation" : "LDL is outside the target shown. Discuss lipid results together with your healthcare professional.",
+    "simpleExplanation" : "LDL is another cholesterol number. It is higher than the target printed here, so ask your doctor what it means for you.",
+    "confidence" : 0.93,
+    "lowConfidence" : false
+  }, {
+    "name" : "Triglycerides",
+    "value" : "160",
+    "unit" : "mg/dL",
+    "referenceRange" : "<150",
+    "status" : "OUTSIDE_RANGE",
+    "explanation" : "Triglycerides are outside the target shown on the report.",
+    "simpleExplanation" : "Triglycerides are a type of fat in the blood. This number is a little above the target shown.",
+    "confidence" : 0.9,
+    "lowConfidence" : false
+  }, {
+    "name" : "Creatinine",
+    "value" : "0.9",
+    "unit" : "mg/dL",
+    "referenceRange" : "0.6-1.2",
+    "status" : "WITHIN_RANGE",
+    "explanation" : "Creatinine is commonly used when reviewing kidney-related lab results. This value is within the provided reference range.",
+    "simpleExplanation" : "This number is often checked when looking at kidney-related tests. It is inside the usual range shown.",
+    "confidence" : 0.94,
+    "lowConfidence" : false
+  } ],
+  "dashboard" : {
+    "total" : 11,
+    "withinRange" : 5,
+    "needsDiscussion" : 5,
+    "importantAttention" : 1
+  },
+  "doctorQuestions" : [ "What could explain the HbA1c and fasting glucose results on this report?", "Do these results need to be repeated or confirmed with another test?", "Do I need any additional tests based on these values?", "Could any of my current medicines or recent illness affect these results?", "When should I follow up, and what targets are appropriate for me?" ],
+  "sources" : [ {
+    "id" : "who-diabetes",
+    "name" : "World Health Organization",
+    "title" : "Diabetes overview",
+    "description" : "General information about blood sugar related health topics.",
+    "url" : "https://www.who.int/health-topics/diabetes",
+    "category" : "GENERAL_HEALTH_INFORMATION"
+  }, {
+    "id" : "mohfw",
+    "name" : "Ministry of Health and Family Welfare, Government of India",
+    "title" : "National health resources",
+    "description" : "Government of India public health information for patients and caregivers.",
+    "url" : "https://www.mohfw.gov.in/",
+    "category" : "GENERAL_HEALTH_INFORMATION"
+  } ],
+  "safetyNotes" : [ "⚠️ Important: This information may require discussion with a qualified healthcare professional.", "ArogyaLens cannot diagnose your condition or determine treatment from this document alone.", "DEMO DATA — NOT A REAL PATIENT" ],
+  "medicine" : null,
+  "prescriptionItems" : null,
+  "dischargeSummary" : null,
+  "familySummary" : "FAMILY SUMMARY\n\nThe report contains a few results that should be discussed with the doctor.\nThe report does not by itself establish a diagnosis.\n\nQuestions to ask during the appointment:\n1. What could explain the HbA1c and fasting glucose results?\n2. Do these tests need to be repeated?\n3. When should we follow up?\n\nDEMO DATA — NOT A REAL PATIENT\n",
+  "translations" : {
+    "en" : "HbA1c is a blood test that estimates average blood sugar over the previous few months.",
+    "hi" : "HbA1c एक रक्त जांच है जो पिछले कुछ महीनों के औसत रक्त शर्करा का अनुमान लगाती है।",
+    "kn" : "HbA1c ರಕ್ತದಲ್ಲಿನ ಸರಾಸರಿ ಸಕ್ಕರೆ ಮಟ್ಟವನ್ನು ಕಳೆದ ಕೆಲವು ತಿಂಗಳುಗಳಲ್ಲಿ ಅಂದಾಜು ಮಾಡುವ ಪರೀಕ್ಷೆ.",
+    "ta" : "HbA1c என்பது கடந்த சில மாதங்களின் சராசரி இரத்த சர்க்கரையை மதிப்பிடும் இரத்தப் பரிசோதனை.",
+    "te" : "HbA1c అనేది గత కొన్ని నెలల సగటు రక్త చక్కెరను అంచనా వేసే రక్త పరీక్ష.",
+    "mr" : "HbA1c ही गेल्या काही महिन्यांच्या सरासरी रक्तसाखरेचा अंदाज देणारी रक्ततपासणी आहे.",
+    "bn" : "HbA1c একটি রক্ত পরীক্ষা যা গত কয়েক মাসের গড় রক্তে শর্করার আনুমানিক মান দেয়।"
+  },
+  "originalPreviewNote" : "Original sample report retained for verification. DEMO DATA — NOT A REAL PATIENT",
+  "aiUsed" : false,
+  "disclaimer" : "We don't replace the doctor. We make healthcare easier to understand."
+}
