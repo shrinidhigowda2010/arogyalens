@@ -6,63 +6,75 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
-import java.util.ArrayList;
+import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Base64;
 import java.util.LinkedHashSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.LongConsumer;
 
+/**
+ * Thin client for the Google Gemini API ({@code generateContent}).
+ *
+ * <ul>
+ *   <li>Authenticates with the {@code x-goog-api-key} header; the key is never placed in URLs or logs.</li>
+ *   <li>Tries the primary model, then each fallback model, on quota (429), retired model (404),
+ *       overload (5xx, retried once with backoff) or timeout.</li>
+ *   <li>Maps failures to distinct user-facing errors (see {@link AiErrors}).</li>
+ *   <li>Caches identical requests briefly via {@link AiResponseCache}.</li>
+ * </ul>
+ */
 @Service
 public class GeminiService {
 
+    static final String BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent";
     private static final Logger log = LoggerFactory.getLogger(GeminiService.class);
+    private static final int TTS_SAMPLE_RATE = 24_000;
 
     private final ArogyaLensProperties properties;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
-    private final List<String> fallbackModels;
+    private final AiResponseCache cache;
+    private LongConsumer sleeper = GeminiService::sleepQuietly;
 
     public GeminiService(ArogyaLensProperties properties,
                          RestClient.Builder restClientBuilder,
                          ObjectMapper objectMapper,
-                         Environment environment) {
+                         AiResponseCache cache) {
         this.properties = properties;
         this.restClient = restClientBuilder.build();
         this.objectMapper = objectMapper;
-        String raw = environment.getProperty("arogyalens.ai.fallback-models",
-                "gemini-flash-latest,gemini-flash-lite-latest");
-        List<String> parsed = new ArrayList<>();
-        for (String m : raw.split(",")) {
-            if (!m.isBlank()) {
-                parsed.add(m.strip());
-            }
-        }
-        this.fallbackModels = List.copyOf(parsed);
+        this.cache = cache;
     }
 
+    /** Replaces the backoff sleeper (used by tests to avoid real waiting). */
+    void setSleeper(LongConsumer sleeper) {
+        this.sleeper = sleeper;
+    }
+
+    /** @return true when AI is enabled and a non-blank API key is configured. */
     public boolean isAvailable() {
-        return properties.ai().isConfigured() && !apiKey().isEmpty();
+        return properties.ai().enabled() && !cleanKey(properties.ai().apiKey()).isEmpty();
     }
 
     /**
-     * API key as configured, with surrounding whitespace/newlines and quotes removed.
-     * Values pasted into hosting dashboards (e.g. Render) often carry a trailing space,
-     * newline or quotes, which Google rejects (400 API_KEY_INVALID / 401 UNAUTHENTICATED).
+     * Normalises an API key pasted into a hosting dashboard: strips surrounding whitespace,
+     * newlines and matching quotes, which Google would otherwise reject.
      */
-    private String apiKey() {
-        String key = properties.ai().apiKey();
-        if (key == null) {
+    public static String cleanKey(String raw) {
+        if (raw == null) {
             return "";
         }
-        key = key.strip();
+        String key = raw.strip();
         if (key.length() >= 2 && ((key.startsWith("\"") && key.endsWith("\""))
                 || (key.startsWith("'") && key.endsWith("'")))) {
             key = key.substring(1, key.length() - 1).strip();
@@ -70,192 +82,209 @@ public class GeminiService {
         return key;
     }
 
-    private String model() {
-        String model = properties.ai().model();
-        return model == null ? "" : model.strip();
+    /** Ordered, de-duplicated list of models to try: primary first, then fallbacks. */
+    List<String> modelChain() {
+        LinkedHashSet<String> models = new LinkedHashSet<>();
+        String primary = properties.ai().model() == null ? "" : properties.ai().model().strip();
+        if (!primary.isEmpty()) {
+            models.add(primary);
+        }
+        models.addAll(properties.ai().fallbackModelList());
+        return List.copyOf(models);
     }
 
-    private String redact(String text) {
-        if (text == null) {
-            return "";
-        }
-        String key = apiKey();
-        String out = key.isEmpty() ? text : text.replace(key, "***");
-        String raw = properties.ai().apiKey();
-        if (raw != null && !raw.isBlank()) {
-            out = out.replace(raw, "***");
-        }
-        return out;
+    /**
+     * Generates a JSON answer for a text prompt.
+     *
+     * @throws ArogyaLensException with a code from {@link AiErrors} on failure
+     */
+    public String generateJson(String prompt) {
+        requireAvailable();
+        Map<String, Object> body = Map.of(
+                "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
+                "generationConfig", jsonConfig());
+        return cached(AiResponseCache.key("text", prompt), body, "answer");
     }
 
+    /**
+     * Generates a JSON answer for a prompt plus an inline image or PDF.
+     *
+     * @throws ArogyaLensException with a code from {@link AiErrors} on failure
+     */
+    public String generateJson(String prompt, byte[] fileBytes, String mimeType, String what) {
+        requireAvailable();
+        String data = Base64.getEncoder().encodeToString(fileBytes);
+        String mime = mimeType == null || mimeType.isBlank() ? "image/jpeg" : mimeType;
+        Map<String, Object> body = Map.of(
+                "contents", List.of(Map.of("parts", List.of(
+                        Map.of("text", prompt),
+                        Map.of("inlineData", Map.of("mimeType", mime, "data", data))))),
+                "generationConfig", jsonConfig());
+        return cached(AiResponseCache.key("file", prompt, mime, data), body, what);
+    }
+
+    /** Best-effort text generation that returns empty instead of throwing (for optional enrichments). */
     public Optional<String> generateText(String prompt) {
         if (!isAvailable()) {
             return Optional.empty();
         }
         try {
-            Map<String, Object> body = Map.of(
-                    "contents", List.of(
-                            Map.of("parts", List.of(Map.of("text", prompt)))
-                    ),
-                    "generationConfig", Map.of(
-                            "temperature", 0.2,
-                            "responseMimeType", "application/json"
-                    )
-            );
-            return Optional.ofNullable(callGemini(body));
-        } catch (Exception e) {
-            log.warn("Gemini text generation failed: {}", describe(e));
+            return Optional.of(generateJson(prompt));
+        } catch (ArogyaLensException e) {
+            log.warn("Optional Gemini text generation failed: {}", e.getCode());
             return Optional.empty();
         }
-    }
-
-    public Optional<String> generateMultimodal(String prompt, byte[] fileBytes, String mimeType) {
-        if (!isAvailable()) {
-            return Optional.empty();
-        }
-        try {
-            String data = Base64.getEncoder().encodeToString(fileBytes);
-            Map<String, Object> inlineData = new HashMap<>();
-            inlineData.put("mimeType", mimeType == null ? "image/jpeg" : mimeType);
-            inlineData.put("data", data);
-
-            Map<String, Object> body = Map.of(
-                    "contents", List.of(
-                            Map.of("parts", List.of(
-                                    Map.of("text", prompt),
-                                    Map.of("inlineData", inlineData)
-                            ))
-                    ),
-                    "generationConfig", Map.of(
-                            "temperature", 0.2,
-                            "responseMimeType", "application/json"
-                    )
-            );
-            return Optional.ofNullable(callGemini(body));
-        } catch (Exception e) {
-            log.warn("Gemini multimodal generation failed: {}", describe(e));
-            return Optional.empty();
-        }
-    }
-
-    private String describe(Exception e) {
-        if (e instanceof ArogyaLensException ale) {
-            return ale.getCode() + " " + redact(ale.getMessage());
-        }
-        return e.getClass().getSimpleName() + " " + redact(e.getMessage());
     }
 
     /**
-     * Calls the primary model; on 429 (quota), 404 (model retired), 5xx (overloaded) or a
-     * timeout/network error, falls back to each model in arogyalens.ai.fallback-models in order.
-     * Other errors (e.g. 400 invalid key, 403) fail immediately since another model won't help.
+     * Synthesises speech with Gemini TTS and returns a WAV file (16-bit mono PCM, 24 kHz).
+     * Used only when the user's device has no voice for the selected language.
      */
-    private String callGemini(Map<String, Object> body) {
-        LinkedHashSet<String> models = new LinkedHashSet<>();
-        models.add(model());
-        models.addAll(fallbackModels);
-        ArogyaLensException last = null;
-        for (String model : models) {
-            if (model.isEmpty()) {
-                continue;
+    public byte[] synthesizeSpeech(String text) {
+        requireAvailable();
+        Map<String, Object> body = Map.of(
+                "contents", List.of(Map.of("parts", List.of(Map.of("text", text)))),
+                "generationConfig", Map.of(
+                        "responseModalities", List.of("AUDIO"),
+                        "speechConfig", Map.of("voiceConfig",
+                                Map.of("prebuiltVoiceConfig", Map.of("voiceName", "Kore")))));
+        String model = properties.ai().ttsModel() == null ? "" : properties.ai().ttsModel().strip();
+        if (model.isEmpty()) {
+            throw AiErrors.failure();
+        }
+        JsonNode root;
+        try {
+            root = post(model, body);
+        } catch (CallFailure failure) {
+            throw failure.toUserError("audio");
+        }
+        for (JsonNode part : root.path("candidates").path(0).path("content").path("parts")) {
+            String b64 = part.path("inlineData").path("data").asText("");
+            if (!b64.isEmpty()) {
+                return pcmToWav(Base64.getDecoder().decode(b64), TTS_SAMPLE_RATE);
             }
+        }
+        throw AiErrors.failure();
+    }
+
+    private String cached(String key, Map<String, Object> body, String what) {
+        Optional<String> hit = cache.get(key);
+        if (hit.isPresent()) {
+            return hit.get();
+        }
+        String result = callWithFallback(body, what);
+        cache.put(key, result);
+        return result;
+    }
+
+    private void requireAvailable() {
+        if (!isAvailable()) {
+            throw AiErrors.notConfigured();
+        }
+    }
+
+    private Map<String, Object> jsonConfig() {
+        return Map.of("temperature", 0.2, "responseMimeType", "application/json");
+    }
+
+    private String callWithFallback(Map<String, Object> body, String what) {
+        List<String> models = modelChain();
+        if (models.isEmpty()) {
+            throw AiErrors.notConfigured();
+        }
+        CallFailure last = null;
+        for (String model : models) {
             for (int attempt = 1; attempt <= 2; attempt++) {
                 try {
-                    return callGeminiOnce(body, model);
-                } catch (ArogyaLensException ex) {
-                    last = ex;
-                    String msg = ex.getMessage() == null ? "" : ex.getMessage();
-                    boolean serverError = msg.matches(".*HTTP 5\\d\\d$");
-                    boolean switchModel = serverError
-                            || msg.endsWith("HTTP 429")
-                            || msg.endsWith("HTTP 404")
-                            || "AI provider failure".equals(msg); // timeout / network error
-                    if (!switchModel) {
-                        throw ex;
+                    return extractText(post(model, body), model, what);
+                } catch (CallFailure failure) {
+                    last = failure;
+                    if (!failure.kind.tryNextModel) {
+                        throw failure.toUserError(what);
                     }
-                    if (serverError && attempt == 1) {
-                        sleepQuietly(700L); // one quick retry on the same model for "high demand"
+                    if (failure.kind == Kind.BUSY && attempt == 1) {
+                        sleeper.accept(700L);
                         continue;
                     }
-                    log.warn("Gemini model {} unavailable ({}); trying next fallback model", model, msg);
+                    log.warn("Gemini model {} unavailable ({}); trying next model", model, failure.kind);
                     break;
                 }
             }
         }
-        throw last != null ? last : new ArogyaLensException(
-                "AI_FAILURE", "AI provider failure: no model configured",
-                "The AI service is temporarily unavailable. Demo mode or retry may help.");
+        throw last.toUserError(what);
     }
 
-    private static void sleepQuietly(long ms) {
+    private JsonNode post(String model, Map<String, Object> body) {
         try {
-            Thread.sleep(ms);
-        } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-        }
-    }
-
-    private String callGeminiOnce(Map<String, Object> body, String model) {
-        try {
-            // Key goes in the x-goog-api-key header (not the URL) so it is never URI-encoded or logged.
-            String response = restClient
-                    .post()
-                    .uri("https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent", model)
-                    .header("x-goog-api-key", apiKey())
+            String response = restClient.post()
+                    .uri(BASE_URL, model)
+                    .header("x-goog-api-key", cleanKey(properties.ai().apiKey()))
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
                     .body(String.class);
-
-            JsonNode root = objectMapper.readTree(response == null ? "{}" : response);
-            JsonNode candidate = root.path("candidates").path(0);
-            StringBuilder text = new StringBuilder();
-            for (JsonNode part : candidate.path("content").path("parts")) {
-                if (part.path("thought").asBoolean(false)) {
-                    continue; // skip thinking summaries
-                }
-                JsonNode t = part.path("text");
-                if (t.isTextual()) {
-                    text.append(t.asText());
-                }
-            }
-            if (text.toString().isBlank()) {
-                log.warn("Gemini returned no text (model={}, finishReason={}, blockReason={})",
-                        model,
-                        candidate.path("finishReason").asText("n/a"),
-                        root.path("promptFeedback").path("blockReason").asText("n/a"));
-                throw new ArogyaLensException(
-                        "AI_EMPTY",
-                        "Empty AI response",
-                        "We couldn't confidently read this document. Try uploading a clearer image with the entire page visible."
-                );
-            }
-            return extractJson(text.toString());
-        } catch (ArogyaLensException ex) {
-            throw ex;
+            return objectMapper.readTree(response == null ? "{}" : response);
         } catch (RestClientResponseException ex) {
+            int status = ex.getStatusCode().value();
             String errorBody = redact(ex.getResponseBodyAsString()).replaceAll("\\s+", " ");
-            if (errorBody.length() > 800) {
-                errorBody = errorBody.substring(0, 800) + "...";
-            }
-            log.warn("Gemini HTTP {} (model={}): {}", ex.getStatusCode().value(), model, errorBody);
-            throw new ArogyaLensException(
-                    "AI_FAILURE",
-                    "AI provider failure: HTTP " + ex.getStatusCode().value(),
-                    "The AI service is temporarily unavailable. Demo mode or retry may help."
-            );
+            log.warn("Gemini HTTP {} (model={}): {}", status, model,
+                    errorBody.length() > 600 ? errorBody.substring(0, 600) + "..." : errorBody);
+            throw new CallFailure(classify(status, errorBody));
+        } catch (ResourceAccessException ex) {
+            log.warn("Gemini network error (model={}): {}", model, redact(ex.getMessage()));
+            throw new CallFailure(Kind.TIMEOUT);
+        } catch (CallFailure ex) {
+            throw ex;
         } catch (Exception ex) {
-            log.warn("Gemini call error (model={}): {} {}", model, ex.getClass().getName(), redact(ex.getMessage()));
-            throw new ArogyaLensException(
-                    "AI_FAILURE",
-                    "AI provider failure",
-                    "The AI service is temporarily unavailable. Demo mode or retry may help."
-            );
+            log.warn("Gemini call error (model={}): {}", model, ex.getClass().getSimpleName());
+            throw new CallFailure(Kind.FAILURE);
         }
     }
 
+    static Kind classify(int status, String body) {
+        String b = body == null ? "" : body;
+        if (status == 401 || status == 403 || b.contains("API_KEY_INVALID")) {
+            return Kind.KEY_INVALID;
+        }
+        if (status == 429) {
+            return Kind.QUOTA;
+        }
+        if (status == 404) {
+            return Kind.MODEL_MISSING;
+        }
+        if (status >= 500) {
+            return Kind.BUSY;
+        }
+        if (status == 400) {
+            return Kind.BAD_INPUT;
+        }
+        return Kind.FAILURE;
+    }
+
+    private String extractText(JsonNode root, String model, String what) {
+        JsonNode candidate = root.path("candidates").path(0);
+        StringBuilder text = new StringBuilder();
+        for (JsonNode part : candidate.path("content").path("parts")) {
+            if (part.path("thought").asBoolean(false)) {
+                continue;
+            }
+            JsonNode t = part.path("text");
+            if (t.isTextual()) {
+                text.append(t.asText());
+            }
+        }
+        if (text.toString().isBlank()) {
+            log.warn("Gemini returned no text (model={}, finishReason={}, blockReason={})", model,
+                    candidate.path("finishReason").asText("n/a"),
+                    root.path("promptFeedback").path("blockReason").asText("n/a"));
+            throw new CallFailure(Kind.EMPTY);
+        }
+        return extractJson(text.toString());
+    }
+
+    /** Strips Markdown code fences and surrounding prose, returning the outermost JSON object. */
     public String extractJson(String raw) {
-        String trimmed = raw.trim();
+        String trimmed = raw == null ? "" : raw.trim();
         if (trimmed.startsWith("```")) {
             int firstNewline = trimmed.indexOf('\n');
             int lastFence = trimmed.lastIndexOf("```");
@@ -269,5 +298,66 @@ public class GeminiService {
             return trimmed.substring(start, end + 1);
         }
         return trimmed;
+    }
+
+    private String redact(String text) {
+        if (text == null) {
+            return "";
+        }
+        String key = cleanKey(properties.ai().apiKey());
+        return key.isEmpty() ? text : text.replace(key, "***");
+    }
+
+    static byte[] pcmToWav(byte[] pcm, int sampleRate) {
+        ByteBuffer header = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN);
+        int byteRate = sampleRate * 2;
+        header.put("RIFF".getBytes()).putInt(36 + pcm.length).put("WAVE".getBytes())
+                .put("fmt ".getBytes()).putInt(16).putShort((short) 1).putShort((short) 1)
+                .putInt(sampleRate).putInt(byteRate).putShort((short) 2).putShort((short) 16)
+                .put("data".getBytes()).putInt(pcm.length);
+        ByteArrayOutputStream out = new ByteArrayOutputStream(44 + pcm.length);
+        out.writeBytes(header.array());
+        out.writeBytes(pcm);
+        return out.toByteArray();
+    }
+
+    private static void sleepQuietly(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /** Failure categories for one Gemini call; {@code tryNextModel} drives model fallback. */
+    enum Kind {
+        QUOTA(true), MODEL_MISSING(true), BUSY(true), TIMEOUT(true),
+        KEY_INVALID(false), BAD_INPUT(false), EMPTY(false), FAILURE(false);
+
+        final boolean tryNextModel;
+
+        Kind(boolean tryNextModel) {
+            this.tryNextModel = tryNextModel;
+        }
+    }
+
+    private static final class CallFailure extends RuntimeException {
+        private final Kind kind;
+
+        CallFailure(Kind kind) {
+            super(kind.name(), null, false, false);
+            this.kind = kind;
+        }
+
+        ArogyaLensException toUserError(String what) {
+            return switch (kind) {
+                case QUOTA -> AiErrors.quota();
+                case BUSY -> AiErrors.busy();
+                case TIMEOUT -> AiErrors.timeout();
+                case KEY_INVALID -> AiErrors.keyInvalid();
+                case BAD_INPUT, EMPTY -> AiErrors.unreadable(what);
+                case MODEL_MISSING, FAILURE -> AiErrors.failure();
+            };
+        }
     }
 }

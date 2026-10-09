@@ -1,5 +1,6 @@
 package com.arogyalens.service;
 
+import com.arogyalens.ai.AiErrors;
 import com.arogyalens.ai.GeminiService;
 import com.arogyalens.ai.PromptLibrary;
 import com.arogyalens.config.ArogyaLensProperties;
@@ -17,8 +18,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
 
 @Service
 public class DischargeSummaryService {
@@ -65,24 +64,15 @@ public class DischargeSummaryService {
             throw new ArogyaLensException("EMPTY_FILE", "Empty upload",
                     "Please upload a discharge summary image or PDF.");
         }
-        fileValidationUtil.validate(file);
+        String mimeType = fileValidationUtil.validate(file);
         if (!geminiService.isAvailable()) {
-            throw new ArogyaLensException("AI_NOT_CONFIGURED", "Gemini API key missing",
-                    "Discharge summary analysis needs GEMINI_API_KEY in the project .env file. Restart the backend after adding it.");
+            throw AiErrors.notConfigured();
         }
 
         String id = sessionService.createId();
         try {
-            Optional<String> ai = geminiService.generateMultimodal(
-                    PromptLibrary.dischargePrompt(),
-                    file.getBytes(),
-                    mime(file)
-            );
-            if (ai.isEmpty()) {
-                throw new ArogyaLensException("AI_EMPTY", "Could not read discharge summary",
-                        "We couldn't confidently read this discharge document. Try a clearer scan.");
-            }
-            JsonNode root = objectMapper.readTree(ai.get());
+            String ai = geminiService.generateJson(PromptLibrary.dischargePrompt(), file.getBytes(), mimeType, "discharge summary");
+            JsonNode root = objectMapper.readTree(ai);
             DischargeSummary summary = new DischargeSummary(
                     safe(root.path("reasonForAdmission").asText("Unable to confidently determine from the uploaded document.")),
                     safe(root.path("treatmentPerformed").asText("Unable to confidently determine from the uploaded document.")),
@@ -101,7 +91,7 @@ public class DischargeSummaryService {
                     "Original discharge document retained for verification. Files are processed temporarily.",
                     true, base.disclaimer()
             );
-            sessionService.save(id, response, ai.get());
+            sessionService.save(id, response, ai);
             return response;
         } catch (ArogyaLensException ex) {
             throw ex;
@@ -111,14 +101,6 @@ public class DischargeSummaryService {
         }
     }
 
-    private String mime(MultipartFile file) {
-        if (file.getContentType() != null && !file.getContentType().isBlank()) return file.getContentType();
-        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
-        if (name.endsWith(".png")) return "image/png";
-        if (name.endsWith(".webp")) return "image/webp";
-        if (name.endsWith(".pdf")) return "application/pdf";
-        return "image/jpeg";
-    }
 
     private String safe(String text) {
         return safetyValidationService.enforceSafeWording(text);

@@ -1,5 +1,6 @@
 package com.arogyalens.service;
 
+import com.arogyalens.ai.AiErrors;
 import com.arogyalens.ai.GeminiService;
 import com.arogyalens.ai.PromptLibrary;
 import com.arogyalens.config.ArogyaLensProperties;
@@ -95,24 +96,22 @@ public class DocumentAnalysisService {
             );
         }
 
-        fileValidationUtil.validate(file);
+        String mimeType = fileValidationUtil.validate(file);
         String id = sessionService.createId();
         String lang = language == null || language.isBlank() ? "en" : language;
 
         try {
             Optional<String> extractedText = localDocumentParser.extractText(file);
-            Optional<String> aiJson = Optional.empty();
+            ArogyaLensException aiError = null;
 
             if (geminiService.isAvailable()) {
-                aiJson = geminiService.generateMultimodal(
-                        PromptLibrary.documentExtractionPrompt(hint),
-                        file.getBytes(),
-                        resolveMime(file)
-                );
-            }
-
-            if (aiJson.isPresent()) {
-                return fromAi(id, aiJson.get(), lang);
+                try {
+                    String aiJson = geminiService.generateJson(
+                            PromptLibrary.documentExtractionPrompt(hint), file.getBytes(), mimeType, "document");
+                    return fromAi(id, aiJson, lang);
+                } catch (ArogyaLensException ex) {
+                    aiError = ex; // fall back to local PDF text parsing below
+                }
             }
 
             if (extractedText.isPresent()) {
@@ -120,23 +119,17 @@ public class DocumentAnalysisService {
                 if (!parameters.isEmpty()) {
                     PrivacyService.PrivacyResult privacy = privacyService.scanAndRedact(extractedText.get());
                     return buildResponse(id, DocumentType.LAB_REPORT, "Blood Test Report",
-                            parameters, privacy, false, lang, extractedText.get());
+                            parameters, privacy, false, lang, privacy.redactedText());
                 }
             }
 
-            if (!geminiService.isAvailable()) {
-                throw new ArogyaLensException(
-                        "AI_NOT_CONFIGURED",
-                        "Gemini API key missing",
-                        "Image analysis needs a Gemini API key. Add GEMINI_API_KEY to the project .env file and restart the backend. PDF text reports can still be analyzed without AI."
-                );
+            if (aiError != null) {
+                throw aiError;
             }
-
-            throw new ArogyaLensException(
-                    "AI_EMPTY",
-                    "Could not read document",
-                    "We couldn't confidently read this document. Try a clearer image or a text-based PDF with the full page visible."
-            );
+            if (!geminiService.isAvailable()) {
+                throw AiErrors.notConfigured();
+            }
+            throw AiErrors.unreadable("document");
         } catch (ArogyaLensException ex) {
             throw ex;
         } catch (Exception e) {
@@ -210,17 +203,6 @@ public class DocumentAnalysisService {
         return response;
     }
 
-    private String resolveMime(MultipartFile file) {
-        String type = file.getContentType();
-        if (type != null && !type.isBlank()) {
-            return type;
-        }
-        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
-        if (name.endsWith(".png")) return "image/png";
-        if (name.endsWith(".webp")) return "image/webp";
-        if (name.endsWith(".pdf")) return "application/pdf";
-        return "image/jpeg";
-    }
 
     private List<MedicalParameter> parseParameters(JsonNode array) {
         List<MedicalParameter> list = new ArrayList<>();

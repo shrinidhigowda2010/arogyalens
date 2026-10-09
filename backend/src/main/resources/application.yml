@@ -1,5 +1,16 @@
 server:
-  port: ${SERVER_PORT:8088}
+  port: ${PORT:${SERVER_PORT:8088}}
+  forward-headers-strategy: framework
+  compression:
+    enabled: true
+    mime-types: application/json,text/html,text/css,application/javascript,text/javascript,image/svg+xml
+    min-response-size: 1024
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+    whitelabel:
+      enabled: false
   tomcat:
     max-swallow-size: 20MB
 
@@ -12,18 +23,30 @@ spring:
       max-request-size: 20MB
   jackson:
     default-property-inclusion: non_null
+  mvc:
+    problemdetails:
+      enabled: false
 
 arogyalens:
   cors:
-    allowed-origins: "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
+    # Comma-separated list of extra origins allowed to call /api (the bundled frontend is same-origin).
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000}
   ai:
     provider: gemini
     api-key: ${GEMINI_API_KEY:}
-    model: ${GEMINI_MODEL:gemini-3-flash-preview}
-    # Tried in order when the primary model returns 429/404/5xx or times out
-    fallback-models: ${GEMINI_FALLBACK_MODELS:gemini-flash-latest,gemini-flash-lite-latest}
+    model: ${GEMINI_MODEL:gemini-flash-latest}
+    # Tried in order when the primary model returns 429/404/5xx or times out.
+    fallback-models: ${GEMINI_FALLBACK_MODELS:${GEMINI_FALLBACK_MODEL:gemini-flash-latest,gemini-flash-lite-latest,gemini-3-flash-preview}}
+    tts-model: ${GEMINI_TTS_MODEL:gemini-2.5-flash-preview-tts}
     timeout-ms: ${AI_TIMEOUT_MS:45000}
     enabled: ${AI_ENABLED:true}
+  cache:
+    max-entries: ${AI_CACHE_MAX_ENTRIES:200}
+    ttl-seconds: ${AI_CACHE_TTL_SECONDS:900}
+  rate-limit:
+    requests-per-minute: ${RATE_LIMIT_PER_MINUTE:20}
+  maps:
+    api-key: ${GOOGLE_MAPS_API_KEY:}
   files:
     max-size-mb: 15
     allowed-types: image/jpeg,image/png,image/webp,application/pdf

@@ -1,5 +1,6 @@
 package com.arogyalens.service;
 
+import com.arogyalens.ai.AiErrors;
 import com.arogyalens.ai.GeminiService;
 import com.arogyalens.ai.PromptLibrary;
 import com.arogyalens.config.ArogyaLensProperties;
@@ -17,8 +18,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
 
 @Service
 public class MedicineService {
@@ -65,24 +64,15 @@ public class MedicineService {
             throw new ArogyaLensException("EMPTY_FILE", "Empty upload",
                     "Please upload a photo of the medicine strip or package.");
         }
-        fileValidationUtil.validate(file);
+        String mimeType = fileValidationUtil.validate(file);
         if (!geminiService.isAvailable()) {
-            throw new ArogyaLensException("AI_NOT_CONFIGURED", "Gemini API key missing",
-                    "Medicine image recognition needs GEMINI_API_KEY in the project .env file. Restart the backend after adding it.");
+            throw AiErrors.notConfigured();
         }
 
         String id = sessionService.createId();
         try {
-            Optional<String> ai = geminiService.generateMultimodal(
-                    PromptLibrary.medicinePrompt(),
-                    file.getBytes(),
-                    mime(file)
-            );
-            if (ai.isEmpty()) {
-                throw new ArogyaLensException("AI_EMPTY", "Could not read medicine",
-                        "We couldn't confidently identify this medicine. Try a clearer photo of the label.");
-            }
-            JsonNode root = objectMapper.readTree(ai.get());
+            String ai = geminiService.generateJson(PromptLibrary.medicinePrompt(), file.getBytes(), mimeType, "medicine label");
+            JsonNode root = objectMapper.readTree(ai);
             MedicineInfo medicine = new MedicineInfo(
                     root.path("name").asText("Unable to confidently identify"),
                     root.path("strength").asText(null),
@@ -106,7 +96,7 @@ public class MedicineService {
                     "Original medicine image retained for verification. Files are processed temporarily.",
                     true, base.disclaimer()
             );
-            sessionService.save(id, response, ai.get());
+            sessionService.save(id, response, ai);
             return response;
         } catch (ArogyaLensException ex) {
             throw ex;
@@ -116,14 +106,6 @@ public class MedicineService {
         }
     }
 
-    private String mime(MultipartFile file) {
-        if (file.getContentType() != null && !file.getContentType().isBlank()) return file.getContentType();
-        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
-        if (name.endsWith(".png")) return "image/png";
-        if (name.endsWith(".webp")) return "image/webp";
-        if (name.endsWith(".pdf")) return "application/pdf";
-        return "image/jpeg";
-    }
 
     private List<String> readList(JsonNode node) {
         List<String> list = new ArrayList<>();

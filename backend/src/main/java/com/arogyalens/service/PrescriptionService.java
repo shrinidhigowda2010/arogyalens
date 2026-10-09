@@ -1,5 +1,6 @@
 package com.arogyalens.service;
 
+import com.arogyalens.ai.AiErrors;
 import com.arogyalens.ai.GeminiService;
 import com.arogyalens.ai.PromptLibrary;
 import com.arogyalens.config.ArogyaLensProperties;
@@ -18,7 +19,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -72,7 +72,7 @@ public class PrescriptionService {
             throw new ArogyaLensException("EMPTY_FILE", "Empty upload",
                     "Please upload a prescription image or PDF.");
         }
-        fileValidationUtil.validate(file);
+        String mimeType = fileValidationUtil.validate(file);
         String id = sessionService.createId();
 
         try {
@@ -86,21 +86,12 @@ public class PrescriptionService {
             }
 
             if (!geminiService.isAvailable()) {
-                throw new ArogyaLensException("AI_NOT_CONFIGURED", "Gemini API key missing",
-                        "Prescription image recognition needs GEMINI_API_KEY in .env. Text-based prescription PDFs can still be parsed without AI.");
-            }
+            throw AiErrors.notConfigured();
+        }
 
-            Optional<String> ai = geminiService.generateMultimodal(
-                    PromptLibrary.prescriptionPrompt(),
-                    file.getBytes(),
-                    mime(file)
-            );
-            if (ai.isEmpty()) {
-                throw new ArogyaLensException("AI_EMPTY", "Could not read prescription",
-                        "We couldn't confidently read this prescription. Try a clearer photo.");
-            }
+            String ai = geminiService.generateJson(PromptLibrary.prescriptionPrompt(), file.getBytes(), mimeType, "prescription");
 
-            JsonNode root = objectMapper.readTree(ai.get());
+            JsonNode root = objectMapper.readTree(ai);
             List<PrescriptionItem> items = new ArrayList<>();
             for (JsonNode node : root.path("items")) {
                 boolean confident = node.path("confident").asBoolean(false);
@@ -122,7 +113,7 @@ public class PrescriptionService {
                 throw new ArogyaLensException("AI_EMPTY", "No prescription lines",
                         "We couldn't confidently extract medicine instructions from this file.");
             }
-            return wrapItems(id, items, true, ai.get());
+            return wrapItems(id, items, true, ai);
         } catch (ArogyaLensException ex) {
             throw ex;
         } catch (Exception e) {
@@ -145,12 +136,4 @@ public class PrescriptionService {
         return response;
     }
 
-    private String mime(MultipartFile file) {
-        if (file.getContentType() != null && !file.getContentType().isBlank()) return file.getContentType();
-        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
-        if (name.endsWith(".png")) return "image/png";
-        if (name.endsWith(".webp")) return "image/webp";
-        if (name.endsWith(".pdf")) return "application/pdf";
-        return "image/jpeg";
-    }
 }
