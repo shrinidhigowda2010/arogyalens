@@ -196,6 +196,15 @@ class GeminiServiceTest {
     void synthesizedSpeechIsWrappedAsWav() {
         GeminiService s = service("k", "m", "");
         server.expect(once(), requestTo(URL.formatted("tts-model")))
+                .andExpect(
+                        org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath(
+                                        "$.contents[0].parts[0].text")
+                                .value(GeminiService.TTS_STYLE + "hello"))
+                .andExpect(
+                        org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath(
+                                        "$.generationConfig.speechConfig.voiceConfig"
+                                                + ".prebuiltVoiceConfig.voiceName")
+                                .value("Sulafat"))
                 .andRespond(
                         withSuccess(
                                 "{\"candidates\":[{\"content\":{\"parts\":[{\"inlineData\":{\"data\":\"AAAA\"}}]}}]}",

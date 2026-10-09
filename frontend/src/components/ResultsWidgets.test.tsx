@@ -69,6 +69,8 @@ function stubDeviceVoice() {
       text: string
       lang = ''
       voice: unknown = null
+      rate = 1
+      pitch = 1
       onend: (() => void) | null = null
       onerror: (() => void) | null = null
       constructor(text: string) {
@@ -111,6 +113,7 @@ describe('AudioPlayer', () => {
     const button = screen.getByRole('button')
     await userEvent.click(button)
     await vi.waitFor(() => expect(synth.speak).toHaveBeenCalled())
+    expect(synth.speak.mock.calls[0]?.[0]).toMatchObject({ rate: 0.85, pitch: 1 })
     expect(button).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(button)
     expect(synth.cancel).toHaveBeenCalled()

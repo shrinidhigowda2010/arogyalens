@@ -51,6 +51,9 @@ export function detectLanguage(text: string, current: AppLanguage): AppLanguage 
 let currentAudio: HTMLAudioElement | null = null
 
 /** Stops any speech that is playing (device voice or cloud audio). */
+/** Speaking rate for on-device voices (1 is the browser default). */
+export const DEVICE_SPEECH_RATE = 0.85
+
 /** Cloud voice requests slower than this fall back to the device voice. */
 export const CLOUD_TIMEOUT_MS = 8000
 
@@ -104,6 +107,9 @@ function speakOnDevice(text: string, language: AppLanguage, onEnd?: () => void):
   const utter = new SpeechSynthesisUtterance(text)
   utter.lang = speechLocale(language)
   if (voice) utter.voice = voice
+  // Slightly slower than normal so older listeners can follow along.
+  utter.rate = DEVICE_SPEECH_RATE
+  utter.pitch = 1
   utter.onend = () => onEnd?.()
   utter.onerror = () => onEnd?.()
   synth.speak(utter)

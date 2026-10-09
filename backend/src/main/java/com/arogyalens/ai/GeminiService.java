@@ -47,6 +47,17 @@ public class GeminiService implements AiClient {
     private final AiResponseCache cache;
     private LongConsumer sleeper = GeminiService::sleepQuietly;
 
+    /** Delivery direction for Gemini TTS (not spoken; see {@link #ttsPrompt}). */
+    static final String TTS_STYLE =
+            "Read the following slowly, calmly and clearly, with short pauses between sentences,"
+                    + " like a friendly nurse explaining to an elderly patient: ";
+
+    /**
+     * Prebuilt voice "Sulafat" (described by Google as warm) suits patient-facing explanations
+     * better than the firmer default "Kore".
+     */
+    static final String TTS_VOICE = "Sulafat";
+
     public GeminiService(
             ArogyaLensProperties properties,
             RestClient.Builder restClientBuilder,
@@ -169,7 +180,8 @@ public class GeminiService implements AiClient {
         requireAvailable();
         Map<String, Object> body =
                 Map.of(
-                        "contents", List.of(Map.of("parts", List.of(Map.of("text", text)))),
+                        "contents",
+                                List.of(Map.of("parts", List.of(Map.of("text", ttsPrompt(text))))),
                         "generationConfig",
                                 Map.of(
                                         "responseModalities", List.of("AUDIO"),
@@ -178,7 +190,7 @@ public class GeminiService implements AiClient {
                                                         "voiceConfig",
                                                         Map.of(
                                                                 "prebuiltVoiceConfig",
-                                                                Map.of("voiceName", "Kore")))));
+                                                                Map.of("voiceName", TTS_VOICE)))));
         String model = properties.ai().ttsModel() == null ? "" : properties.ai().ttsModel().strip();
         if (model.isEmpty()) {
             throw AiErrors.failure();
@@ -196,6 +208,14 @@ public class GeminiService implements AiClient {
             }
         }
         throw AiErrors.failure();
+    }
+
+    /**
+     * Gemini TTS style prompt: a natural-language direction followed by a colon and the text. The
+     * model applies the direction to the delivery and speaks only the text after the colon.
+     */
+    static String ttsPrompt(String text) {
+        return TTS_STYLE + text;
     }
 
     private String cached(String key, Map<String, Object> body, String what) {
