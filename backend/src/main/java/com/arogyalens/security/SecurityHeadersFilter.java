@@ -42,7 +42,7 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
         response.setHeader("X-Frame-Options", "DENY");
         response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
         response.setHeader(
-                "Permissions-Policy", "camera=(self), microphone=(self), geolocation=(self)");
+                "Permissions-Policy", "camera=(), microphone=(self), geolocation=(self)");
         response.setHeader("Cross-Origin-Opener-Policy", "same-origin");
         if (request.isSecure()) {
             response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");

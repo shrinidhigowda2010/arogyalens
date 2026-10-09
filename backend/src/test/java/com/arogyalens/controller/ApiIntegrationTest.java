@@ -82,6 +82,10 @@ class ApiIntegrationTest {
                         header().string(
                                         "Content-Security-Policy",
                                         containsString("frame-ancestors 'none'")))
+                .andExpect(
+                        header().string(
+                                        "Permissions-Policy",
+                                        "camera=(), microphone=(self), geolocation=(self)"))
                 .andExpect(header().string("Cache-Control", "no-store"));
     }
 
