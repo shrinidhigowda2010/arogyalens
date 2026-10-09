@@ -11,6 +11,14 @@ interface UploadZoneProps {
   disabled?: boolean
 }
 
+/** iPhone photos (HEIC/HEIF) cannot be read by browsers or the AI, so ask for a JPG instead. */
+export const HEIC_MESSAGE =
+  'This is an iPhone HEIC photo. Please convert it to JPG (or set Camera → Formats → Most Compatible) and upload again.'
+
+function isHeic(file: File): boolean {
+  return /heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(file.name)
+}
+
 function isAllowed(file: File): boolean {
   const type = (file.type || '').toLowerCase()
   if (
@@ -49,6 +57,10 @@ export function UploadZone({ onFileSelect, selectedFile, disabled }: UploadZoneP
       setLocalError(null)
       if (!file) {
         onFileSelect(null)
+        return
+      }
+      if (isHeic(file)) {
+        setLocalError(HEIC_MESSAGE)
         return
       }
       if (!isAllowed(file)) {

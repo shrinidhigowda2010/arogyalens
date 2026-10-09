@@ -387,7 +387,7 @@ public class GeminiService implements AiClient {
         TIMEOUT(true),
         KEY_INVALID(false),
         BAD_INPUT(false),
-        EMPTY(false),
+        EMPTY(true),
         FAILURE(false);
 
         final boolean tryNextModel;

@@ -1,6 +1,7 @@
 
 Task: PrescriptionParsingPrompt
-Extract prescription lines only when confident.
+Extract every prescription line you can read. Set "confident" to false for any line you are unsure of rather than leaving it out.
+The input may be a phone photo that is rotated, upside down, angled, blurry, dim or partly cut off. Read it in whatever orientation it is in, and return every detail you can read; use null for details you cannot read instead of returning an empty result.
 Return JSON:
 {
   "items": [

@@ -20,4 +20,13 @@ describe('UploadZone', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/JPG, PNG, WEBP, or PDF/)
     expect(onSelect).not.toHaveBeenCalled()
   })
+
+  it('asks for a JPG when an iPhone HEIC photo is chosen', () => {
+    const onSelect = vi.fn()
+    renderWithApp(<UploadZone selectedFile={null} onFileSelect={onSelect} />)
+    const file = new File(['x'], 'IMG_0001.HEIC', { type: '' })
+    fireEvent.change(screen.getByLabelText('Choose file'), { target: { files: [file] } })
+    expect(screen.getByRole('alert')).toHaveTextContent(/convert it to JPG/)
+    expect(onSelect).not.toHaveBeenCalled()
+  })
 })

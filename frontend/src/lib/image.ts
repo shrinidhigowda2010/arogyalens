@@ -1,7 +1,19 @@
 /** Longest edge, in pixels, of images sent for analysis. Plenty for reading labels and reports. */
-export const MAX_IMAGE_EDGE = 2000
+export const MAX_IMAGE_EDGE = 1600
 /** Images smaller than this are uploaded unchanged. */
 export const COMPRESS_THRESHOLD_BYTES = 1_000_000
+
+/**
+ * Decodes an image with its EXIF orientation applied, so sideways phone photos reach the AI
+ * upright. Older browsers that reject the option fall back to a plain decode.
+ */
+async function decodeUpright(file: File): Promise<ImageBitmap> {
+  try {
+    return await createImageBitmap(file, { imageOrientation: 'from-image' })
+  } catch {
+    return createImageBitmap(file)
+  }
+}
 
 /** Scales (width, height) down to fit within `max` on the longest edge, keeping aspect ratio. */
 export function fitWithin(
@@ -16,14 +28,15 @@ export function fitWithin(
 }
 
 /**
- * Downscales and re-encodes large photos as JPEG before upload, which makes uploads faster on
+ * Downscales large photos (longest edge {@link MAX_IMAGE_EDGE}px, upright) and re-encodes them
+ * as JPEG 0.85 before upload, which makes uploads faster on
  * mobile data and uses less AI quota. PDFs, small files and unsupported browsers are left as-is.
  */
 export async function prepareUpload(file: File): Promise<File> {
   if (!file.type.startsWith('image/') || file.size < COMPRESS_THRESHOLD_BYTES) return file
   if (typeof createImageBitmap !== 'function' || typeof document === 'undefined') return file
   try {
-    const bitmap = await createImageBitmap(file)
+    const bitmap = await decodeUpright(file)
     const { width, height } = fitWithin(bitmap.width, bitmap.height, MAX_IMAGE_EDGE)
     const canvas = document.createElement('canvas')
     canvas.width = width

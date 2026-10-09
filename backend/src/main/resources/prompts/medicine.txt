@@ -1,6 +1,7 @@
 
 Task: MedicationExplanationPrompt
-Identify the medicine from the image if clearly visible.
+Identify the medicine from the image.
+The input may be a phone photo that is rotated, upside down, angled, blurry, dim or partly cut off. Read it in whatever orientation it is in, and return every detail you can read; use null for details you cannot read instead of returning an empty result.
 Return JSON:
 {
   "name": "...",
